@@ -11,7 +11,7 @@ HOST = "api.bitfinex.com"
 VERSION = "v1"
 
 PATH_SYMBOLS = "symbols"
-PATH_TICKER = "ticker/%s"
+PATH_TICKER = "pubticker/%s"
 PATH_TODAY = "today/%s"
 PATH_STATS = "stats/%s"
 PATH_LENDBOOK = "lendbook/%s"
@@ -384,12 +384,13 @@ class Client:
         """
         GET /ticker/:symbol
 
-        curl https://api.bitfinex.com/v1/ticker/btcusd
+        curl https://api.bitfinex.com/v1/pubticker/btcusd
         {
             'ask': '562.9999',
             'timestamp': '1395552290.70933607',
             'bid': '562.25',
             'last_price': u'562.25',
+            'volume': '7842.11542563',
             'mid': u'562.62495'}
         """
         data = self._get(self.url_for(PATH_TICKER, (symbol)))

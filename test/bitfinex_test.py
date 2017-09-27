@@ -76,7 +76,7 @@ class BitfinexTest(unittest.TestCase):
     @httpretty.activate
     def test_should_have_ticker(self):
         # mock out the request
-        mock_body = '{"mid":"562.56495","bid":"562.15","ask":"562.9799","last_price":"562.25","timestamp":"1395552658.339936691"}'
+        mock_body = '{"mid":"562.56495","bid":"562.15","ask":"562.9799","last_price":"562.25","volume":"7842.11542563","timestamp":"1395552658.339936691"}'
         url = self.client.url_for('ticker/%s', path_arg='btcusd')
         httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
 
@@ -85,6 +85,7 @@ class BitfinexTest(unittest.TestCase):
             "bid": 562.15,
             "ask": 562.9799,
             "last_price": 562.25,
+            "volume": 7842.11542563,
             "timestamp": 1395552658.339936691
         }
 
