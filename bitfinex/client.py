@@ -393,10 +393,7 @@ class Client:
             'volume': '7842.11542563',
             'mid': u'562.62495'}
         """
-        data = self._get(self.url_for(PATH_TICKER, (symbol)))
-
-        # convert all values to floats
-        return self._convert_to_floats(data)
+        return self._get(self.url_for(PATH_TICKER, (symbol)))
 
 
     def today(self, symbol):
@@ -407,10 +404,7 @@ class Client:
         {"low":"550.09","high":"572.2398","volume":"7305.33119836"}
         """
 
-        data = self._get(self.url_for(PATH_TODAY, (symbol)))
-
-        # convert all values to floats
-        return self._convert_to_floats(data)
+        return self._get(self.url_for(PATH_TODAY, (symbol)))
 
 
     def stats(self, symbol):
@@ -430,7 +424,7 @@ class Client:
                 if key == 'period':
                     new_value = int(value)
                 elif key == 'volume':
-                    new_value = float(value)
+                    new_value = value
 
                 period[key] = new_value
 
@@ -456,7 +450,7 @@ class Client:
 
                 for key, value in lend.items():
                     if key in ['rate', 'amount', 'timestamp']:
-                        new_value = float(value)
+                        new_value = value
                     elif key == 'period':
                         new_value = int(value)
                     elif key == 'frr':
@@ -490,17 +484,7 @@ class Client:
         for type_ in data.keys():
             for list_ in data[type_]:
                 for key, value in list_.items():
-                    list_[key] = float(value)
-
-        return data
-
-
-    def _convert_to_floats(self, data):
-        """
-        Convert all values in a dict to floats
-        """
-        for key, value in data.items():
-            data[key] = float(value)
+                    list_[key] = value
 
         return data
 
