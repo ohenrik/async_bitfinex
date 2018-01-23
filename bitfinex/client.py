@@ -1,3 +1,6 @@
+#!/usr/bin/python
+#-*- coding: utf-8 -*-
+
 from __future__ import absolute_import
 import requests
 import json
@@ -28,7 +31,7 @@ class TradeClient:
     """
 
     def __init__(self, key, secret):
-        self.URL = "{0:s}://{1:s}/{2:s}".format(PROTOCOL, HOST, VERSION)
+        self.URL = "%s://%s/%s" % (PROTOCOL, HOST, VERSION)
         self.KEY = key
         self.SECRET = secret
         pass
@@ -39,7 +42,7 @@ class TradeClient:
         Returns a nonce
         Used in authentication
         """
-        return str(time.time() * 1000000)
+        return str(int(time.time())* 1000000)
 
     def _sign_payload(self, payload):
         j = json.dumps(payload)
@@ -199,7 +202,7 @@ class TradeClient:
 
         return json_resp
 
-    def past_trades(self, timestamp=0, symbol='btcusd'):
+    def past_trades(self, timestamp='0.0', symbol='btcusd'):
         """
         Fetch past trades
         :param timestamp:
@@ -221,10 +224,9 @@ class TradeClient:
 
     def place_offer(self, currency, amount, rate, period, direction):
         """
-
         :param currency:
         :param amount:
-        :param rate:
+        :param anual rate:
         :param period:
         :param direction:
         :return:
@@ -277,6 +279,24 @@ class TradeClient:
 
         signed_payload = self._sign_payload(payload)
         r = requests.post(self.URL + "/offer/status", headers=signed_payload, verify=True)
+        json_resp = r.json()
+
+        return json_resp
+
+
+    def offers_history(self):
+        """
+
+        :param offer_id:
+        :return:
+        """
+        payload = {
+            "request": "/v1/offers/hist",
+            "nonce": self._nonce
+        }
+
+        signed_payload = self._sign_payload(payload)
+        r = requests.post(self.URL + "/offers/hist", headers=signed_payload, verify=True)
         json_resp = r.json()
 
         return json_resp
@@ -335,6 +355,32 @@ class TradeClient:
         }
         signed_payload = self._sign_payload(payload)
         r = requests.post(self.URL + "/history", headers=signed_payload, verify=True)
+        json_resp = r.json()
+
+        return json_resp
+
+
+    def movements(self, currency, start=0, end=9999999999, limit=10000, method='bitcoin'):
+        """
+        View you balance ledger entries
+        :param currency: currency to look for
+        :param since: Optional. Return only the history after this timestamp.
+        :param until: Optional. Return only the history before this timestamp.
+        :param limit: Optional. Limit the number of entries to return. Default is 500.
+        :param method: Optional. Return only entries that used this method. Accepted inputs are: "bitcoin",
+        "litecoin", "wire".
+        """
+        payload = {
+            "request": "/v1/history/movements",
+            "nonce": self._nonce,
+            "currency": currency,
+            "since": start,
+            "until": end,
+            "limit": limit,
+            "method": method
+        }
+        signed_payload = self._sign_payload(payload)
+        r = requests.post(self.URL + "/history/movements", headers=signed_payload, verify=True)
         json_resp = r.json()
 
         return json_resp
