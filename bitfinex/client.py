@@ -64,10 +64,10 @@ class Client:
         return url
 
     def _nonce(self):
-        """
-        Returns a nonce
-        Used in authentication
-        """
+        """Returns a nonce used in authentication.
+        Nonce must be an increasing number, if the API key has been used
+        earlier or other frameworks that have used higher numbers you might
+        need to increase the nonce_multiplier."""
         return str(float(time.time()) * self.nonce_multiplier)
 
     def _sign_payload(self, payload):
@@ -154,11 +154,6 @@ class Client:
 
         }
         response = self._post("/order/new/multi", payload=payload, verify=True)
-        try:
-            response['order_ids']
-        except:
-            return response['message']
-
         return response
 
     def delete_order(self, order_id):
@@ -174,11 +169,6 @@ class Client:
         }
 
         response = self._post("/order/cancel", payload=payload, verify=True)
-        try:
-            response['avg_execution_price']
-        except:
-            raise BitfinexException(response['message'])
-
         return response
 
     def delete_all_orders(self):
@@ -208,10 +198,6 @@ class Client:
         }
 
         response = self._post("/order/status", payload=payload, verify=True)
-        try:
-            response['avg_execution_price']
-        except:
-            raise BitfinexException(response['message'])
         return response
 
     def active_orders(self):
