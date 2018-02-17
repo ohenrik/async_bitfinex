@@ -91,6 +91,30 @@ class TradeClient:
 
         return json_resp
 
+    def place_multiple_orders(self, orders):
+        """
+        Submit a new multiple order.
+        """
+
+        payload = {
+
+           "request" : "/v1/order/new/multi",
+           "nonce"   : self._nonce,
+           "orders"  : orders
+
+        }
+        signed_payload = self._sign_payload(payload)
+        r = requests.post(self.URL + "/order/new/multi", headers=signed_payload, verify=True)
+        json_resp = r.json()
+        try:
+            json_resp['order_ids']
+        except:
+            return json_resp['message']
+
+        return json_resp
+
+
+
     def delete_order(self, order_id):
         """
         Cancel an order.
