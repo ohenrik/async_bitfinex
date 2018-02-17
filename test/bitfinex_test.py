@@ -98,10 +98,10 @@ class BitfinexTest(unittest.TestCase):
             "minimum_order_size":"0.1",
             "expiration":"NA"
             }]'''
-        url = self.client.url_for('symbol_details')
+        url = self.client.url_for('symbols_details')
         httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
         expected = mock_body
-        self.assertIsInstance(self.client.symbol_details(), list)
+        self.assertIsInstance(self.client.symbols_details(), list)
 
 
     @httprettified

@@ -445,7 +445,7 @@ class Client:
         return self._get(self.url_for(PATH_SYMBOLS))
 
 
-    def symbol_details(self):
+    def symbols_details(self):
         """
         GET /symbols_details
 
@@ -460,7 +460,7 @@ class Client:
               "expiration":"NA"
             }]
         """
-        return self._get(self.url_for("symbol_details"))
+        return self._get(self.url_for("symbols_details"))
 
 
     def ticker(self, symbol):
@@ -573,7 +573,11 @@ class Client:
 
 
     def _get(self, url):
-        return requests.get(url, timeout=TIMEOUT).json()
+        response = requests.get(url, timeout=TIMEOUT)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise BitfinexException(response.status_code)
 
 
     def _build_parameters(self, parameters):
