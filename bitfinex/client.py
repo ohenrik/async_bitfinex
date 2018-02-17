@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import requests
 import json
+from json.decoder import JSONDecodeError
 import base64
 import hmac
 import hashlib
@@ -80,6 +81,38 @@ class Client:
             "X-BFX-PAYLOAD": data
         }
 
+    def _get(self, url):
+        response = requests.get(url, timeout=TIMEOUT)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            try:
+                content = response.json()
+            except JSONDecodeError:
+                content = response.text()
+            raise BitfinexException(response.status_code, response.reason, content)
+
+    def _post(self, endoint, payload, verify=False):
+        url = self.url_for(path=endoint)
+        signed_payload = self._sign_payload(payload)
+        response = requests.post(url, headers=payload, verify=True)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            try:
+                content = response.json()
+            except JSONDecodeError:
+                content = response.text()
+            raise BitfinexException(response.status_code, response.reason, content)
+
+    def _build_parameters(self, parameters):
+        # sort the keys so we can test easily in Python 3.3 (dicts are not
+        # ordered)
+        keys = list(parameters.keys())
+        keys.sort()
+
+        return '&'.join(["%s=%s" % (k, parameters[k]) for k in keys])
+
     def place_order(self, amount, price, side, ord_type, symbol='btcusd', exchange='bitfinex'):
         """
         Submit a new order.
@@ -104,16 +137,8 @@ class Client:
 
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/order/new", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        try:
-            json_resp['order_id']
-        except:
-            raise BitfinexException(json_resp['message'])
-
-        return json_resp
+        response = self._post("/order/new", payload=payload, verify=True)
+        return response
 
     def place_multiple_orders(self, orders):
         """
@@ -127,17 +152,13 @@ class Client:
            "orders"  : orders
 
         }
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/order/new/multi", headers=signed_payload, verify=True)
-        json_resp = r.json()
+        response = self._post("/order/new/multi", payload=payload, verify=True)
         try:
-            json_resp['order_ids']
+            response['order_ids']
         except:
-            return json_resp['message']
+            return response['message']
 
-        return json_resp
-
-
+        return response
 
     def delete_order(self, order_id):
         """
@@ -151,16 +172,13 @@ class Client:
             "order_id": order_id
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/order/cancel", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
+        response = self._post("/order/cancel", payload=payload, verify=True)
         try:
-            json_resp['avg_execution_price']
+            response['avg_execution_price']
         except:
-            raise BitfinexException(json_resp['message'])
+            raise BitfinexException(response['message'])
 
-        return json_resp
+        return response
 
     def delete_all_orders(self):
         """
@@ -173,10 +191,8 @@ class Client:
             "nonce": self._nonce(),
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/order/cancel/all", headers=signed_payload, verify=True)
-        json_resp = r.json()
-        return json_resp
+        response = self._post("/order/cancel/all", payload=payload, verify=True)
+        return response
 
     def status_order(self, order_id):
         """
@@ -190,47 +206,34 @@ class Client:
             "order_id": order_id
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/order/status", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
+        response = self._post("/order/status", payload=payload, verify=True)
         try:
-            json_resp['avg_execution_price']
+            response['avg_execution_price']
         except:
-            raise BitfinexException(json_resp['message'])
-
-        return json_resp
+            raise BitfinexException(response['message'])
+        return response
 
     def active_orders(self):
         """
         Fetch active orders
         """
-
         payload = {
             "request": "/v1/orders",
             "nonce": self._nonce()
         }
-
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.url_for(path="orders"), headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("orders", payload=payload, verify=True)
+        return response
 
     def active_positions(self):
         """
         Fetch active Positions
         """
-
         payload = {
             "request": "/v1/positions",
             "nonce": self._nonce()
         }
-
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.url_for(path="positions"), headers=signed_payload, verify=True)
-        json_resp = r.json()
-        return json_resp
+        response = self._post("positions", payload=payload, verify=True)
+        return response
 
     def claim_position(self, position_id):
         """
@@ -243,12 +246,8 @@ class Client:
             "nonce": self._nonce(),
             "position_id": position_id
         }
-
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.url_for(path="position/claim"), headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("position/claim", payload=payload, verify=True)
+        return response
 
     def past_trades(self, timestamp='0.0', symbol='btcusd'):
         """
@@ -264,11 +263,8 @@ class Client:
             "timestamp": timestamp
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/mytrades", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/mytrades", payload=payload, verify=True)
+        return response
 
     def place_offer(self, currency, amount, rate, period, direction):
         """
@@ -289,11 +285,8 @@ class Client:
             "direction": direction
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/offer/new", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/offer/new", payload=payload, verify=True)
+        return response
 
     def cancel_offer(self, offer_id):
         """
@@ -307,11 +300,8 @@ class Client:
             "offer_id": offer_id
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/offer/cancel", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/offer/cancel", payload=payload, verify=True)
+        return response
 
     def status_offer(self, offer_id):
         """
@@ -325,11 +315,8 @@ class Client:
             "offer_id": offer_id
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/offer/status", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/offer/status", payload=payload, verify=True)
+        return response
 
 
     def offers_history(self):
@@ -342,12 +329,8 @@ class Client:
             "request": "/v1/offers/hist",
             "nonce": self._nonce()
         }
-
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/offers/hist", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/offers/hist", payload=payload, verify=True)
+        return response
 
     def active_offers(self):
         """
@@ -359,11 +342,8 @@ class Client:
             "nonce": self._nonce()
         }
 
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/offers", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/offers", payload=payload, verify=True)
+        return response
 
     def balances(self):
         """
@@ -375,12 +355,8 @@ class Client:
             "request": "/v1/balances",
             "nonce": self._nonce()
         }
-
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/balances", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/balances", payload=payload, verify=True)
+        return response
 
     def history(self, currency, since=0, until=9999999999, limit=500, wallet='exchange'):
         """
@@ -401,11 +377,8 @@ class Client:
             "limit": limit,
             "wallet": wallet
         }
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/history", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/history", payload=payload, verify=True)
+        return response
 
 
     def movements(self, currency, start=0, end=9999999999, limit=10000, method='bitcoin'):
@@ -427,11 +400,8 @@ class Client:
             "limit": limit,
             "method": method
         }
-        signed_payload = self._sign_payload(payload)
-        r = requests.post(self.URL + "/history/movements", headers=signed_payload, verify=True)
-        json_resp = r.json()
-
-        return json_resp
+        response = self._post("/history/movements", payload=payload, verify=True)
+        return response
 
     def symbols(self):
         """
@@ -484,7 +454,6 @@ class Client:
         curl "https://api.bitfinex.com/v1/today/btcusd"
         {"low":"550.09","high":"572.2398","volume":"7305.33119836"}
         """
-
         return self._get(self.url_for(PATH_TODAY, (symbol)))
 
 
@@ -568,20 +537,3 @@ class Client:
                     list_[key] = value
 
         return data
-
-
-    def _get(self, url):
-        response = requests.get(url, timeout=TIMEOUT)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise BitfinexException(response.status_code)
-
-
-    def _build_parameters(self, parameters):
-        # sort the keys so we can test easily in Python 3.3 (dicts are not
-        # ordered)
-        keys = list(parameters.keys())
-        keys.sort()
-
-        return '&'.join(["%s=%s" % (k, parameters[k]) for k in keys])
