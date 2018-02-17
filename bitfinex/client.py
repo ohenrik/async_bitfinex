@@ -68,7 +68,7 @@ class Client:
         Returns a nonce
         Used in authentication
         """
-        return str(int(time.time() * 100000))
+        return str(int(time.time())* 1000000)
 
     def _sign_payload(self, payload):
         j = json.dumps(payload)
