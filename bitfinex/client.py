@@ -24,6 +24,9 @@ PATH_ORDERBOOK = "book/%s"
 TIMEOUT = 5.0
 
 
+class BitfinexException(Exception):
+    pass
+
 
 class TradeClient:
     """
@@ -87,7 +90,7 @@ class TradeClient:
         try:
             json_resp['order_id']
         except:
-            return json_resp['message']
+            raise BitfinexException(json_resp['message'])
 
         return json_resp
 
@@ -134,7 +137,7 @@ class TradeClient:
         try:
             json_resp['avg_execution_price']
         except:
-            return json_resp['message']
+            raise BitfinexException(json_resp['message'])
 
         return json_resp
 
@@ -173,7 +176,7 @@ class TradeClient:
         try:
             json_resp['avg_execution_price']
         except:
-            return json_resp['message']
+            raise BitfinexException(json_resp['message'])
 
         return json_resp
 
