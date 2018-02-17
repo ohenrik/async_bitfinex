@@ -1,5 +1,7 @@
 # Bitfinex Python Client
 
+**Continuation of**: https://github.com/scottjbarr/bitfinex
+
 A Python client for the Bitfinex API.
 
 Most of the unauthenticated calls have been implemented.  It is planned to
@@ -7,7 +9,8 @@ implement the remainder of the API.
 
 ## Installation
 
-    pip install bitfinex
+    pip install git+https://github.com/ohenrik/bitfinex
+
 
 
 ## Poll The Order Book
@@ -24,6 +27,28 @@ Install the libs
 
     pip install -r ./requirements.txt
 
+## Usage
+
+    from bitfinex import Client
+    client = Client(os.environ.get('BITFINEX_KEY'), os.environ.get('BITFINEX_SECRET'))
+
+    self.client.ticker('btcusd')
+    >>>>  { "mid": "562.56495",
+            "bid": "562.15",
+            "ask": "562.9799",
+            "last_price": "562.25",
+            "volume": "7842.11542563",
+            "timestamp": "1395552658.339936691"
+          }
+
+
+## Compatibility
+
+This code has been tested on
+
+- Python 3.6.3
+
+But will probably work on python 2.7 as well.
 
 ## Tests
 
@@ -50,23 +75,6 @@ Or you can just run the tests
 Test coverage of the code. View cover/index.html to view detailed reports.
 
     nosetests --with-coverage --cover-html --cover-package bitfinex
-
-
-## Usage
-
-See the examples directory for samples.
-
-e.g.
-
-    PYTHONPATH=.:$PYTHONPATH python examples/basic.py
-
-
-## Compatibility
-
-This code has been tested on
-
-- Python 2.7.5
-- Python 3.3.1
 
 
 ## TODO
