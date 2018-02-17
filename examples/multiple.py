@@ -1,6 +1,6 @@
-from bitfinex.client import TradeClient
+from bitfinex.client import Client
 
-tradeClient = TradeClient('apiKey','apiSecret')
+client = Client('apiKey','apiSecret')
 
 
 orders=[]
@@ -11,7 +11,6 @@ for price in range(3, 6):
     orders.append(payload)
 
 
-apiResponse = tradeClient.place_multiple_orders(orders)
+apiResponse = client.place_multiple_orders(orders)
 
 print(apiResponse)
-

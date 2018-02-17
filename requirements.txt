@@ -1,10 +1,10 @@
 requests
-httpretty
+lxml
+mocket
 nose
 mock
 coverage
 nose-cov
-lxml
 sniffer
 Quandl
 python-decouple

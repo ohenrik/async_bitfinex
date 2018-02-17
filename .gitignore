@@ -6,3 +6,4 @@ build
 __pycache__
 bitfinex.egg-info
 dist
+.pytest_cache/
