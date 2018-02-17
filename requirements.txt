@@ -4,9 +4,8 @@ nose
 mock
 coverage
 nose-cov
-lxml==3.3.1
+lxml
 sniffer
-##
 Quandl
 python-decouple
 pandas
