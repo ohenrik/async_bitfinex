@@ -445,6 +445,24 @@ class Client:
         return self._get(self.url_for(PATH_SYMBOLS))
 
 
+    def symbol_details(self):
+        """
+        GET /symbols_details
+
+        curl https://api.bitfinex.com/v1/symbols_details
+            [{
+              "pair":"btcusd",
+              "price_precision":5,
+              "initial_margin":"30.0",
+              "minimum_margin":"15.0",
+              "maximum_order_size":"2000.0",
+              "minimum_order_size":"0.01",
+              "expiration":"NA"
+            }]
+        """
+        return self._get(self.url_for("symbol_details"))
+
+
     def ticker(self, symbol):
         """
         GET /ticker/:symbol

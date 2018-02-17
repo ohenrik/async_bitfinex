@@ -78,6 +78,31 @@ class BitfinexTest(unittest.TestCase):
         expected = ["btcusd","ltcusd","ltcbtc"]
         self.assertEqual(expected, self.client.symbols())
 
+    @httprettified
+    def test_should_have_symbol_details(self):
+        # mock out the request
+        mock_body = '''[{
+            "pair":"btcusd",
+            "price_precision":5,
+            "initial_margin":"30.0",
+            "minimum_margin":"15.0",
+            "maximum_order_size":"2000.0",
+            "minimum_order_size":"0.01",
+            "expiration":"NA"
+            },{
+            "pair":"ltcusd",
+            "price_precision":5,
+            "initial_margin":"30.0",
+            "minimum_margin":"15.0",
+            "maximum_order_size":"5000.0",
+            "minimum_order_size":"0.1",
+            "expiration":"NA"
+            }]'''
+        url = self.client.url_for('symbol_details')
+        httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
+        expected = mock_body
+        self.assertIsInstance(self.client.symbol_details(), list)
+
 
     @httprettified
     def test_should_have_ticker(self):
@@ -223,7 +248,7 @@ class TestTradeClient(unittest.TestCase):
 
         ao = self.tc.active_orders()
         self.assertIsInstance(ao, list)
-        
+
     @httprettified
     def test_get_active_positions_returns_json(self):
         mock_body = '[{"price":"562.2601","amount":"0.985","timestamp":"1395567556.0"}]'
