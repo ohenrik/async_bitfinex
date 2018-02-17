@@ -35,9 +35,14 @@ class Client:
     See https://www.bitfinex.com/pages/api for API documentation.
     """
 
+    def __init__(self, key=None, secret=None, nonce_multiplier=1):
+        self.URL = "%s://%s/%s" % (PROTOCOL, HOST, VERSION)
+        self.KEY = key
+        self.SECRET = secret
+        self.nonce_multiplier = nonce_multiplier
+
     def server(self):
         return u"{0:s}://{1:s}/{2:s}".format(PROTOCOL, HOST, VERSION)
-
 
     def url_for(self, path, path_arg=None, parameters=None):
 
@@ -56,19 +61,12 @@ class Client:
 
         return url
 
-
-    def __init__(self, key=None, secret=None):
-        self.URL = "%s://%s/%s" % (PROTOCOL, HOST, VERSION)
-        self.KEY = key
-        self.SECRET = secret
-        pass
-
     def _nonce(self):
         """
         Returns a nonce
         Used in authentication
         """
-        return str(int(time.time())* 1000000)
+        return str(int(time.time()) * self.nonce_multiplier)
 
     def _sign_payload(self, payload):
         j = json.dumps(payload)
