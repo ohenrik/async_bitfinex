@@ -95,7 +95,7 @@ class Client:
     def _post(self, endoint, payload, verify=False):
         url = self.url_for(path=endoint)
         signed_payload = self._sign_payload(payload)
-        response = requests.post(url, headers=payload, verify=True)
+        response = requests.post(url, headers=signed_payload, verify=True)
         if response.status_code == 200:
             return response.json()
         else:
