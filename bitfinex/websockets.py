@@ -41,13 +41,6 @@ class BitfinexClientProtocol(WebSocketClientProtocol):
             else:
                 self.factory.callback(payload_obj)
 
-class BitfinexUserClientProtocol(BitfinexClientProtocol):
-    def onConnect(self, response):
-        # Send auth message
-        self.sendMessage(get_auth_command(), isBinary=False)
-        # reset the delay after reconnecting
-        self.factory.resetDelay()
-
 class BitfinexReconnectingClientFactory(ReconnectingClientFactory):
 
     # set initial delay to a short time
@@ -85,12 +78,6 @@ class BitfinexClientFactory(WebSocketClientFactory, BitfinexReconnectingClientFa
     def buildProtocol(self, addr):
         return BitfinexClientProtocol(self, payload=self.payload)
 
-class BitfinexUserClientFactory(BitfinexClientFactory, BitfinexReconnectingClientFactory):
-
-    protocol = BitfinexUserClientProtocol
-
-    def buildProtocol(self, addr):
-        return BitfinexUserClientProtocol(self)
 
 class BitfinexSocketManager(threading.Thread):
 
@@ -111,22 +98,6 @@ class BitfinexSocketManager(threading.Thread):
         self._user_timer = None
         self._user_listen_key = None
         self._user_callback = None
-
-    # def _start_user_socket(self, callback):
-    #     if "user" in self._conns:
-    #         return False
-    #
-    #     factory_url = self.STREAM_URL
-    #     self.auth_factory = BitfinexUserClientFactory(factory_url)
-    #     self.auth_factory.base_client = self
-    #     self.auth_factory.protocol = BitfinexUserClientProtocol
-    #     self.auth_factory.callback = callback
-    #     # factory.json
-    #     self.auth_factory.reconnect = True
-    #     context_factory = ssl.ClientContextFactory()
-    #
-    #     self._conns["user"] = connectWS(self.auth_factory, context_factory)
-    #     return self._conns["user"]
 
     def _start_socket(self, id_, payload, callback):
         if id_ in self._conns:
