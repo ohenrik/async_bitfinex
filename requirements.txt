@@ -9,3 +9,7 @@ sniffer
 Quandl
 python-decouple
 pandas
+twisted
+autobahn
+pyopenssl
+service_identity

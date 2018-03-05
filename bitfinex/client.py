@@ -524,3 +524,7 @@ class Client:
                     list_[key] = value
 
         return data
+
+class TradeClient(Client):
+    """Added for backward compatibility"""
+    pass
