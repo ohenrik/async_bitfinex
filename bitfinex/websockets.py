@@ -145,6 +145,9 @@ class BitfinexSocketManager(threading.Thread):
 
         self._conns = {}
 
+
+class WssClient(BitfinexSocketManager):
+
     ###########################################################################
     # Bitfinex commands
     ###########################################################################
