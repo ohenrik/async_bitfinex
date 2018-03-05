@@ -11,34 +11,10 @@ from autobahn.twisted.websocket import WebSocketClientFactory, \
 from twisted.internet import reactor, ssl
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet.error import ReactorAlreadyRunning
+from bitfinex import wss_utils
 
 # Example used to make send logic
 # https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
-
-NOTIFICATION_CODES = {
-    # docs: http://bit.ly/2CcnKwB
-    'new_order': 'on',
-    'cancel_order': 'oc'
-}
-
-def get_auth_command():
-    nonce = int(time.time() * 1000000)
-    auth_payload = 'AUTH{}'.format(nonce)
-    signature = hmac.new(
-        os.environ.get("API_SECRET").encode(), #settings.API_SECRET.encode()
-        msg = auth_payload.encode('utf8'),
-        digestmod = hashlib.sha384
-    ).hexdigest()
-    payload = {
-        # docs: http://bit.ly/2CEx9bM
-        'event': 'auth',
-        'apiKey': os.environ.get("API_KEY"),
-        'authSig': signature,
-        'authPayload': auth_payload,
-        'authNonce': nonce,
-        'calc': 1
-    }
-    return json.dumps(payload, ensure_ascii = False).encode('utf8')
 
 class BitfinexClientProtocol(WebSocketClientProtocol):
 
@@ -128,7 +104,7 @@ class BitfinexSocketManager(threading.Thread):
         :type client: binance.Client
         """
         threading.Thread.__init__(self)
-        self.auth_factory = None
+        # self.auth_factory = None
         self.factories = {}
         self._connected_event = threading.Event()
         self._conns = {}
@@ -136,40 +112,21 @@ class BitfinexSocketManager(threading.Thread):
         self._user_listen_key = None
         self._user_callback = None
 
-    def send(self, payload):
-        order_id = time.time()*1000
-        data = [
-            0,
-            NOTIFICATION_CODES['new_order'],
-            None,
-            {
-                # docs: http://bit.ly/2CrQjWO
-                'cid': order_id,
-                'type': "EXCHANGE LIMIT",
-                'symbol': 'tBTCUSD',
-                'amount': str("0.1"),
-                'price': str("1.0"),
-                'hidden': 0
-            }
-        ]
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
-        self.auth_factory.protocol_instance.sendMessage(payload, isBinary=False)
-
-    def _start_user_socket(self, callback):
-        if "user" in self._conns:
-            return False
-
-        factory_url = self.STREAM_URL
-        self.auth_factory = BitfinexUserClientFactory(factory_url)
-        self.auth_factory.base_client = self
-        self.auth_factory.protocol = BitfinexUserClientProtocol
-        self.auth_factory.callback = callback
-        # factory.json
-        self.auth_factory.reconnect = True
-        context_factory = ssl.ClientContextFactory()
-
-        self._conns["user"] = connectWS(self.auth_factory, context_factory)
-        return self._conns["user"]
+    # def _start_user_socket(self, callback):
+    #     if "user" in self._conns:
+    #         return False
+    #
+    #     factory_url = self.STREAM_URL
+    #     self.auth_factory = BitfinexUserClientFactory(factory_url)
+    #     self.auth_factory.base_client = self
+    #     self.auth_factory.protocol = BitfinexUserClientProtocol
+    #     self.auth_factory.callback = callback
+    #     # factory.json
+    #     self.auth_factory.reconnect = True
+    #     context_factory = ssl.ClientContextFactory()
+    #
+    #     self._conns["user"] = connectWS(self.auth_factory, context_factory)
+    #     return self._conns["user"]
 
     def _start_socket(self, id_, payload, callback):
         if id_ in self._conns:
@@ -217,6 +174,33 @@ class BitfinexSocketManager(threading.Thread):
 
         self._conns = {}
 
+    ###########################################################################
+    # Bitfinex commands
+    ###########################################################################
+
+    def authenticate(self, callback, filters=None):
+        nonce = int(time.time() * 1000000)
+        auth_payload = 'AUTH{}'.format(nonce)
+        signature = hmac.new(
+            os.environ.get("API_SECRET").encode(), #settings.API_SECRET.encode()
+            msg = auth_payload.encode('utf8'),
+            digestmod = hashlib.sha384
+        ).hexdigest()
+        data = {
+            # docs: http://bit.ly/2CEx9bM
+            'event': 'auth',
+            'apiKey': os.environ.get("API_KEY"),
+            'authSig': signature,
+            'authPayload': auth_payload,
+            'authNonce': nonce,
+            'calc': 1
+        }
+        if filters:
+            data['filter'] = filters
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        return self._start_socket("auth", payload, callback)
+
+
     def subscribe_to_candles(self, pair, timeframe=None, **kwargs):
         """Subscribe to the passed pair's OHLC data channel.
         :param pair: str, Symbol pair to request data for
@@ -244,3 +228,36 @@ class BitfinexSocketManager(threading.Thread):
         }
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         return self._start_socket(id_, payload, print)
+
+    def new_order(self, order_type, pair, amount, price, hidden=0):
+        # assert order_type in wss_utils.ORDER_TYPES, (
+        #     "{}: is not a valid order type".format(order_type))
+        data = [
+            0,
+            wss_utils.get_notification_code('new order'),
+            None,
+            {
+                # docs: http://bit.ly/2CrQjWO
+                'cid': time.time()*1000,
+                'type': order_type,
+                'symbol': utils.order_pair(pair),
+                'amount': amount,
+                'price': price,
+                'hidden': hidden
+            }
+        ]
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+
+    def cancel_order(self, order_id):
+        data = [
+            0,
+            wss_utils.get_notification_code('cancel order'),
+            None,
+            {
+                # docs: http://bit.ly/2BVqwW6
+                'id': order_id
+            }
+        ]
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
