@@ -201,7 +201,7 @@ class BitfinexSocketManager(threading.Thread):
         return self._start_socket("auth", payload, callback)
 
 
-    def subscribe_to_candles(self, pair, timeframe=None, **kwargs):
+    def subscribe_to_candles(self, pair, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
         :param pair: str, Symbol pair to request data for
         :param timeframe: str, {1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h,
@@ -227,7 +227,7 @@ class BitfinexSocketManager(threading.Thread):
             'key': key,
         }
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
-        return self._start_socket(id_, payload, print)
+        return self._start_socket(id_, payload, callback)
 
     def new_order(self, order_type, pair, amount, price, hidden=0):
         # assert order_type in wss_utils.ORDER_TYPES, (
@@ -240,7 +240,7 @@ class BitfinexSocketManager(threading.Thread):
                 # docs: http://bit.ly/2CrQjWO
                 'cid': time.time()*1000,
                 'type': order_type,
-                'symbol': utils.order_pair(pair),
+                'symbol': wss_utils.order_pair(pair),
                 'amount': amount,
                 'price': price,
                 'hidden': hidden
