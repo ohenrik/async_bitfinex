@@ -1,7 +1,7 @@
 # coding=utf-8
 import os
 import threading
-
+from datetime import date
 import time, json
 import hmac, hashlib
 
@@ -232,13 +232,15 @@ class BitfinexSocketManager(threading.Thread):
     def new_order(self, order_type, pair, amount, price, hidden=0):
         # assert order_type in wss_utils.ORDER_TYPES, (
         #     "{}: is not a valid order type".format(order_type))
+        client_order_id = time.time()*1000
+        client_order_date = date.isoformat()
         data = [
             0,
             wss_utils.get_notification_code('new order'),
             None,
             {
                 # docs: http://bit.ly/2CrQjWO
-                'cid': time.time()*1000,
+                'cid': client_order_id,
                 'type': order_type,
                 'symbol': wss_utils.order_pair(pair),
                 'amount': amount,
@@ -248,6 +250,7 @@ class BitfinexSocketManager(threading.Thread):
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        return (client_order_id, client_order_date)
 
     def cancel_order(self, order_id):
         data = [
@@ -257,6 +260,29 @@ class BitfinexSocketManager(threading.Thread):
             {
                 # docs: http://bit.ly/2BVqwW6
                 'id': order_id
+            }
+        ]
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+
+    def cancel_order_cid(self, order_cid, order_date):
+        """Cancel order using the client id and the date of the cid. Both are
+        returned from the new_order command from this library.
+
+        Attr:
+            order_cid (str):
+                cid string. e.g. "1234154"
+            order_date (str):
+                Iso formated order date. e.g. "2012-01-23"
+        """
+        data = [
+            0,
+            wss_utils.get_notification_code('cancel order'),
+            None,
+            {
+                # docs: http://bit.ly/2BVqwW6
+                'cid': order_cid,
+                'cid_date': cid_date
             }
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
