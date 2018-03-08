@@ -11,7 +11,7 @@ httpretty = HTTPretty
 urllib3.disable_warnings()
 
 from decouple import config
-from bitfinex.client import Client
+from bitfinex.rest import Client
 
 API_KEY = os.environ.get('API_KEY', config('API_KEY'))
 API_SECRET = os.environ.get('API_SECRET', config('API_SECRET'))

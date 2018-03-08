@@ -77,7 +77,7 @@ This code has been tested on
 
 But the REST library will probably work on python 2.7 as well.
 
-I haven’t tested the Websocket library on 2.7 
+I haven’t tested the Websocket library on 2.7
 
 ## Tests
 
@@ -85,7 +85,11 @@ When continuing this project (from scottjbarr) I decided to use pytests.
 
 so this should start your tests:
 
-    pyenv -v
+    pytest -v
+
+However... Due to the fact that Mocket (python-mocket) crashes whenever
+pyopenssl is installed. Tests related to the rest library does now work unless
+you uninstall pyopenssl.
 
 ## TODO
 
