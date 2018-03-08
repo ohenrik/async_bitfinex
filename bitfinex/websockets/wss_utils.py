@@ -1,4 +1,10 @@
 """Module for websocket utilities"""
+import datetime
+
+def UtcNow():
+    now = datetime.datetime.utcnow()
+    return float(now.strftime("%s.%f"))
+
 
 def order_pair(pair):
     pair = 't' + pair if not pair.startswith('t') else pair

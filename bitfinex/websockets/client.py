@@ -2,7 +2,7 @@
 import os
 import threading
 from datetime import date
-import time, json
+import json
 import hmac, hashlib
 
 from autobahn.twisted.websocket import WebSocketClientFactory, \
@@ -154,7 +154,7 @@ class WssClient(BitfinexSocketManager):
         self.secret = secret
 
     def authenticate(self, callback, filters=None):
-        nonce = int(time.time() * 1000000)
+        nonce = int(wss_utils.UtcNow() * 1000000)
         auth_payload = 'AUTH{}'.format(nonce)
         signature = hmac.new(
             self.secret.encode(), #settings.API_SECRET.encode()
@@ -204,10 +204,10 @@ class WssClient(BitfinexSocketManager):
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
-    def new_order(self, order_type, pair, amount, price, hidden=0):
+    def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
         # assert order_type in wss_utils.ORDER_TYPES, (
         #     "{}: is not a valid order type".format(order_type))
-        client_order_id = time.time()*1000
+        client_order_id = wss_utils.UtcNow()*1000
         client_order_date = date.isoformat()
         data = [
             0,
@@ -220,7 +220,8 @@ class WssClient(BitfinexSocketManager):
                 'symbol': wss_utils.order_pair(pair),
                 'amount': amount,
                 'price': price,
-                'hidden': hidden
+                'hidden': hidden,
+                "flags": sum(flags)
             }
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
