@@ -11,7 +11,7 @@ from autobahn.twisted.websocket import WebSocketClientFactory, \
 from twisted.internet import reactor, ssl
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet.error import ReactorAlreadyRunning
-from bitfinex import wss_utils
+from bitfinex.websockets import wss_utils
 
 # Example used to make send logic
 # https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
