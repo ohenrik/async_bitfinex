@@ -5,7 +5,11 @@ version = '0.2.6'
 # Runtime dependencies. See requirements.txt for development dependencies.
 dependencies = [
     'requests',
-    'httpretty'
+    'httpretty',
+    "twisted",
+    "autobahn",
+    "pyopenssl",
+    "service_identity",
 ]
 
 setup(name='bitfinex',
