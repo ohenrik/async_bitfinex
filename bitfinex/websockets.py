@@ -32,7 +32,6 @@ class BitfinexClientProtocol(WebSocketClientProtocol):
         self.factory.resetDelay()
 
     def onMessage(self, payload, isBinary):
-        # print("{\n\nMessage Recieved \n\n}")
         if not isBinary:
             try:
                 payload_obj = json.loads(payload.decode('utf8'))
@@ -86,12 +85,8 @@ class BitfinexSocketManager(threading.Thread):
     _user_timeout = 30 * 60  # 30 minutes
 
     def __init__(self): #client
-        """Initialise the BitfinexSocketManager
-        :param client: Bitfinex API client
-        :type client: binance.Client
-        """
+        """Initialise the BitfinexSocketManager"""
         threading.Thread.__init__(self)
-        # self.auth_factory = None
         self.factories = {}
         self._connected_event = threading.Event()
         self._conns = {}
@@ -152,18 +147,24 @@ class WssClient(BitfinexSocketManager):
     # Bitfinex commands
     ###########################################################################
 
+    def __init__(self, key=None, secret=None): #client
+        """Initialise the WssClient"""
+        super().__init__()
+        self.key = key
+        self.secret = secret
+
     def authenticate(self, callback, filters=None):
         nonce = int(time.time() * 1000000)
         auth_payload = 'AUTH{}'.format(nonce)
         signature = hmac.new(
-            os.environ.get("API_SECRET").encode(), #settings.API_SECRET.encode()
+            self.secret.encode(), #settings.API_SECRET.encode()
             msg = auth_payload.encode('utf8'),
             digestmod = hashlib.sha384
         ).hexdigest()
         data = {
             # docs: http://bit.ly/2CEx9bM
             'event': 'auth',
-            'apiKey': os.environ.get("API_KEY"),
+            'apiKey': self.key,
             'authSig': signature,
             'authPayload': auth_payload,
             'authNonce': nonce,
