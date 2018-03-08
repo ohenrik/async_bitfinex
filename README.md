@@ -27,7 +27,7 @@ Install the libs
 
     pip install -r ./requirements.txt
 
-## Usage
+## Usage REST API (v1)
 
     from bitfinex import Client
     client = Client(os.environ.get('BITFINEX_KEY'), os.environ.get('BITFINEX_SECRET'))
@@ -41,6 +41,33 @@ Install the libs
             "timestamp": "1395552658.339936691"
           }
 
+## Usage Websockets API (v2)
+
+The documentation for bitfinex websockets are somewhat confusing
+So expect to spend some time figuring out just what is actually returned
+through the authenticated channel.
+
+    import os
+    key = os.environ.get("API_KEY")
+    secret = os.environ.get("API_SECRET")
+    from bitfinex.websockets import WssClient
+    bm = WssClient(key, secret)
+
+    # Authenticate and listen to account feedback
+    # print is the callback method. You probably want to do something else.
+    bm.authenticate(print)
+    # Subscribe to candles (starts with a set of completed candles, then updates with last completed + updated uncompleted candle)
+    bm.subscribe_to_candles("BTCUSD", "1m", print)
+    bm.start()
+
+    # Send new order
+    bm.new_order(order_type="EXCHANGE LIMIT", pair="BTCUSD", amount="0.1", price="1", hidden=0)
+
+
+So far only the auth channel and candle stick channel is implemented.
+
+For sending messages I have only implemented new_order and cancel_order.
+I will add documentation for this later, for now take a look at the source code.
 
 ## Compatibility
 
@@ -48,49 +75,39 @@ This code has been tested on
 
 - Python 3.6.3
 
-But will probably work on python 2.7 as well.
+But the REST library will probably work on python 2.7 as well.
+
+I haven’t tested the Websocket library on 2.7 
 
 ## Tests
 
-Depending on your system, install one of the following libs
+When continuing this project (from scottjbarr) I decided to use pytests.
 
-- pyinotify (Linux)
-- pywin32 (Windows)
-- MacFSEvents (OSX)
+so this should start your tests:
 
-Sniffer will watch for changes
-
-    sniffer -x --nocapture
-
-Or Sniffer with code coverage enabled...
-
-    sniffer -x --nocapture -x--with-coverage -x--cover-html -x--cover-package=bitfinex
-
-Or you can just run the tests
-
-    nosetests
-
-### Test Coverage
-
-Test coverage of the code. View cover/index.html to view detailed reports.
-
-    nosetests --with-coverage --cover-html --cover-package bitfinex
-
+    pyenv -v
 
 ## TODO
 
-- Implement all API calls that Bitfinex make available.
+- Implement all API calls that Bitfinex make available (v1).
+- Add v2 REST api logic
+- Add the rest of Websocket messages and channels.
 
 ## Contributing
 
-1. Create an issue and discuss.
+Contributions are welcome and i will do my best to merge PR quickly.
+
+Here are some guidelines that makes everything easier for everybody:
+
 1. Fork it.
 1. Create a feature branch containing only your fix or feature.
-1. Add tests!!!! Features or fixes that don't have good tests won't be accepted.
+1. Preferably add/update tests. Features or fixes that don't have good tests won't be accepted before someone adds them (mostly...).
 1. Create a pull request.
+
 
 ## References
 
+- This project is a continuation of: https://github.com/scottjbarr/bitfinex
 - [https://www.bitfinex.com/pages/api](https://www.bitfinex.com/pages/api)
 - [https://community.bitfinex.com/showwiki.php?title=Sample+API+Code](https://community.bitfinex.com/showwiki.php?title=Sample+API+Code)
 - [https://gist.github.com/jordanbaucke/5812039](https://gist.github.com/jordanbaucke/5812039)
@@ -100,5 +117,6 @@ Test coverage of the code. View cover/index.html to view detailed reports.
 The MIT License (MIT)
 
 Copyright (c) 2014-2015 Scott Barr
+^ Original project created by this guy.
 
 See [LICENSE.md](LICENSE.md)
