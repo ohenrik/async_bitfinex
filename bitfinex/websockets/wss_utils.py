@@ -3,8 +3,7 @@ import datetime
 
 def UtcNow():
     now = datetime.datetime.utcnow()
-    return float(now.strftime("%s.%f"))
-
+    return int(float(now.strftime("%s.%f"))*10000000)
 
 def order_pair(pair):
     pair = 't' + pair if not pair.startswith('t') else pair
@@ -43,7 +42,7 @@ NOTIFICATION_CODES = {
     "ws":	"wallet snapshot",
     "wu":	"wallet update",
     "os":	"order snapshot",
-    "on":	"new order",
+    "on":	"order new",
     "ou":	"order update",
     "oc":	"order cancel",
     "oc-req":	"order cancel request",

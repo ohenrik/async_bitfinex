@@ -207,11 +207,10 @@ class WssClient(BitfinexSocketManager):
     def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
         # assert order_type in wss_utils.ORDER_TYPES, (
         #     "{}: is not a valid order type".format(order_type))
-        client_order_id = wss_utils.UtcNow()*1000
-        client_order_date = date.isoformat()
+        client_order_id = wss_utils.UtcNow()
         data = [
             0,
-            wss_utils.get_notification_code('new order'),
+            wss_utils.get_notification_code('order new'),
             None,
             {
                 # docs: http://bit.ly/2CrQjWO
@@ -226,12 +225,12 @@ class WssClient(BitfinexSocketManager):
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-        return (client_order_id, client_order_date)
+        return client_order_id
 
     def cancel_order(self, order_id):
         data = [
             0,
-            wss_utils.get_notification_code('cancel order'),
+            wss_utils.get_notification_code('order cancel'),
             None,
             {
                 # docs: http://bit.ly/2BVqwW6
@@ -253,12 +252,12 @@ class WssClient(BitfinexSocketManager):
         """
         data = [
             0,
-            wss_utils.get_notification_code('cancel order'),
+            wss_utils.get_notification_code('order cancel'),
             None,
             {
                 # docs: http://bit.ly/2BVqwW6
                 'cid': order_cid,
-                'cid_date': cid_date
+                'cid_date': order_date
             }
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
