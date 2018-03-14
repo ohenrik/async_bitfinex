@@ -46,9 +46,9 @@ class BitfinexReconnectingClientFactory(ReconnectingClientFactory):
     # set initial delay to a short time
     initialDelay = 0.1
 
-    maxDelay = 10
+    maxDelay = 20
 
-    maxRetries = 5
+    maxRetries = 30
 
 
 class BitfinexClientFactory(WebSocketClientFactory, BitfinexReconnectingClientFactory):
@@ -175,7 +175,6 @@ class WssClient(BitfinexSocketManager):
             data['filter'] = filters
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         return self._start_socket("auth", payload, callback)
-
 
     def subscribe_to_candles(self, pair, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
