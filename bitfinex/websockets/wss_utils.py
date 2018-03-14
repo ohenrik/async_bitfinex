@@ -45,6 +45,7 @@ NOTIFICATION_CODES = {
     "on":	"order new",
     "ou":	"order update",
     "oc":	"order cancel",
+    "ox_multi": "order multi-op",
     "oc-req":	"order cancel request",
     "oc_multi-req":	"multiple orders cancel request",
     "te":	"trade executed",

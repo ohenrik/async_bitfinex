@@ -83,8 +83,6 @@ class BitfinexSocketManager(threading.Thread):
 
     STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
-    _user_timeout = 30 * 60  # 30 minutes
-
     def __init__(self): #client
         """Initialise the BitfinexSocketManager"""
         threading.Thread.__init__(self)
@@ -176,6 +174,18 @@ class WssClient(BitfinexSocketManager):
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         return self._start_socket("auth", payload, callback)
 
+    def subscribe_to_trades(self, symbol):
+        """Subscribe to the passed pair's OHLC data channel.
+        """
+        id_ = "_".join(["trades", symbol])
+        data = {
+            'event': 'subscribe',
+            'channel': 'trades',
+            'symbol': symbol,
+        }
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        return self._start_socket(id_, payload, callback)
+
     def subscribe_to_candles(self, pair, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
         :param pair: str, Symbol pair to request data for
@@ -215,28 +225,49 @@ class WssClient(BitfinexSocketManager):
         self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
         return client_cid
 
-    def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
-        # assert order_type in wss_utils.ORDER_TYPES, (
-        #     "{}: is not a valid order type".format(order_type))
+    def new_order_op(self, order_type, pair, amount, price, hidden=0, flags=list()):
         client_order_id = wss_utils.UtcNow()
+        return {
+            'cid': client_order_id,
+            'type': order_type,
+            'symbol': wss_utils.order_pair(pair),
+            'amount': amount,
+            'price': price,
+            'hidden': hidden,
+            "flags": sum(flags)
+        }
+
+    def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
+        operation = self.new_order_op(order_type, pair, amount, price, 0, flags)
         data = [
             0,
             wss_utils.get_notification_code('order new'),
             None,
-            {
-                # docs: http://bit.ly/2CrQjWO
-                'cid': client_order_id,
-                'type': order_type,
-                'symbol': wss_utils.order_pair(pair),
-                'amount': amount,
-                'price': price,
-                'hidden': hidden,
-                "flags": sum(flags)
-            }
+            operation
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-        return client_order_id
+        return operation["cid"]
+
+    def multi_order(self, operations):
+        """Multi order operation.
+
+        Args:
+            operations (list):
+                a list of operations. Read more here:
+                https://bitfinex.readme.io/v2/reference#ws-input-order-multi-op
+                Hint. you can use the self.new_order_op() for easy order
+                operation creation.
+        """
+        data = [
+            0,
+            wss_utils.get_notification_code('order multi-op'),
+            None,
+            operations
+        ]
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        return [order[1].get("cid", None) for order in operations]
 
     def cancel_order(self, order_id):
         data = [
