@@ -19,6 +19,7 @@ from bitfinex.websockets import wss_utils
 class BitfinexClientProtocol(WebSocketClientProtocol):
 
     def __init__(self, factory, payload=None):
+        super().__init__()
         self.factory = factory
         self.payload = payload
 
