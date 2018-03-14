@@ -204,6 +204,17 @@ class WssClient(BitfinexSocketManager):
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
+    def ping(self, channel="auth"):
+        """Ping bitfinex."""
+        client_cid = wss_utils.UtcNow()
+        data = {
+            'event': 'ping',
+            'cid': client_cid
+        }
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
+        return client_cid
+
     def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
         # assert order_type in wss_utils.ORDER_TYPES, (
         #     "{}: is not a valid order type".format(order_type))
