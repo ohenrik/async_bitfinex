@@ -1,6 +1,7 @@
 from setuptools import setup
+from setuptools import setup, find_packages
 
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 
 # Runtime dependencies. See requirements.txt for development dependencies.
 DEPENDENCIES = [
@@ -20,7 +21,7 @@ setup(
     author_email='henrik@amplify.no',
     url='https://github.com/ohenrik/bitfinex',
     license='MIT',
-    packages=['bitfinex'],
+    packages=find_packages(),
     install_requires=DEPENDENCIES,
     # download_url='https://github.com/ohenrik/bitfinex/tarball/%s' % version,
     keywords=['bitcoin', 'btc'],
