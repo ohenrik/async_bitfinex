@@ -237,6 +237,21 @@ class Client:
         response = self._post("position/claim", payload=payload, verify=True)
         return response
 
+    def close_position(self, position_id):
+        """
+        Closes the selected position with a market order.
+        :param position_id:
+        :return:
+        """
+        payload = {
+            "request": "/v1/position/close",
+            "nonce": self._nonce(),
+            "position_id": position_id
+        }
+        response = self._post("position/close", payload=payload, verify=True)
+        return response
+
+
     def past_trades(self, timestamp='0.0', symbol='btcusd'):
         """
         Fetch past trades
@@ -525,101 +540,6 @@ class Client:
                     list_[key] = value
 
         return data
-
-    """
-    bitfinex.com API REST2.
-
-    See https://bitfinex.readme.io/v2/docs and https://bitfinex.readme.io/v2/reference for documentation.
-    """
-
-
-    def _headers_rest2(self, path, nonce, body):
-
-        signature = "/api/" + path + nonce + body
-        print ("Signing: " + signature)
-        h = hmac.new(self.SECRET.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
-        signature = h.hexdigest()
-
-        return {
-            "bfx-nonce": nonce,
-            "bfx-apikey": self.KEY,
-            "bfx-signature": signature,
-            "content-type": "application/json"
-        }
-
-    def _post_rest2(self, path, payload, verify=False):
-        nonce    = self._nonce()
-        headers  = self._headers_rest2(path, nonce, payload)
-        response = requests.post(self.BASE_URL + path, headers=headers, data=payload, verify=True)
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            try:
-                content = response.json()
-            except JSONDecodeError:
-                content = response.text()
-            raise BitfinexException(response.status_code, response.reason, content)
-
-
-    def wallets_balance(self):
-        """
-        Get account wallets
-        """
-
-        body = {}
-        rawBody = json.dumps(body)
-        path = "v2/auth/r/wallets"
-        response = self._post_rest2(path,rawBody,verify=True)
-        return response
-
-
-
-    def active_orders_rest2(self,trade_pair=""):
-        """
-        Fetch active orders using rest api v2
-        """
-
-        body = {}
-        rawBody = json.dumps(body)
-        path = "v2/auth/r/orders/"+trade_pair
-        response = self._post_rest2(path,rawBody,verify=True)
-        return response
-
-
-    def orders_history(self,trade_pair):
-        """
-        Returns the most recent closed or canceled orders up to circa two weeks ago
-        """
-
-        body = {}
-        rawBody = json.dumps(body)
-        path = "v2/auth/r/orders/"+trade_pair+"/hist"
-        response = self._post_rest2(path,rawBody,verify=True)
-        return response
-
-    def order_trades(self,trade_pair,order_id):
-        """
-        Fetch all trades associated with the pair and order_id provided 
-        it always returns a list object that is empty if no trades are associated with the pair and orderid provided
-        """
-        body = {}
-        rawBody = json.dumps(body)
-        path = "v2/auth/r/order/"+trade_pair+":"+str(order_id)+"/trades"
-        response = self._post_rest2(path,rawBody,verify=True)
-        return response
-
-
-    def trades_history(self,trade_pair):
-        """
-        Returns list of trades
-        """
-
-        body = {}
-        rawBody = json.dumps(body)
-        path = "v2/auth/r/trades/"+trade_pair+"/hist"
-        response = self._post_rest2(path,rawBody,verify=True)
-        return response
 
 class TradeClient(Client):
     """Added for backward compatibility"""
