@@ -143,3 +143,8 @@ btfx_client.active_orders()
 btfx_client.orders_history("tIOTUSD")
 btfx_client.order_trades('tIOTUSD',14395751815)
 btfx_client.trades_history("tIOTUSD")
+
+trades = btfx_client.trades_history("tIOTUSD",limit=10)
+
+for trade in trades:
+    print(trade)

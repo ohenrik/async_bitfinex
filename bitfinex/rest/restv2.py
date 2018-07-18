@@ -56,7 +56,7 @@ class Client:
             "content-type": "application/json"
         }
 
-    def _post(self, path, payload, verify=False):
+    def _post(self, path, payload,verify=False):
         nonce    = self._nonce()
         headers  = self._headers(path, nonce, payload)
         response = requests.post(self.BASE_URL + path, headers=headers, data=payload, verify=True)
@@ -67,6 +67,8 @@ class Client:
             try:
                 content = response.json()
             except JSONDecodeError:
+                print (f"response {response}")
+                print (f"response {response.status_code}")
                 content = response.text()
             raise BitfinexException(response.status_code, response.reason, content)
 
@@ -240,7 +242,6 @@ class Client:
         return response
 
 
-
     def active_orders(self,trade_pair=""):
         """
         Fetch active orders using rest api v2
@@ -254,13 +255,13 @@ class Client:
         return response
 
 
-    def orders_history(self,trade_pair):
+    def orders_history(self,trade_pair,**kwargs):
         """
         Returns the most recent closed or canceled orders up to circa two weeks ago
         https://bitfinex.readme.io/v2/reference#orders-history
         """
 
-        body = {}
+        body = kwargs
         rawBody = json.dumps(body)
         path = "v2/auth/r/orders/"+trade_pair+"hist"
         response = self._post(path,rawBody,verify=True)
@@ -278,15 +279,15 @@ class Client:
         return response
 
 
-    def trades_history(self,trade_pair):
+    def trades_history(self,trade_pair,**kwargs):
         """
         Returns list of trades
         https://api.bitfinex.com/v:version/auth/r/trades/:Symbol/hist
         """
 
-        body = {}
+        body = kwargs
         rawBody = json.dumps(body)
-        path = "v2/auth/r/trades/"+trade_pair+"hist"
+        path = "v2/auth/r/trades/"+trade_pair+"/hist"
         response = self._post(path,rawBody,verify=True)
         return response
 
@@ -315,12 +316,12 @@ class Client:
         return response
 
 
-    def funding_offers_history(self,symbol=""):
+    def funding_offers_history(self,symbol="",**kwargs):
         """
         Get past inactive funding offers. Limited to last 3 days.
         https://bitfinex.readme.io/v2/reference#rest-auth-funding-offers-hist
         """
-        body = {}
+        body = kwargs
         rawBody = json.dumps(body)
         addsymbol = "{}/".format(symbol) if symbol else ""
         path = "v2/auth/r/funding/offers/"+addsymbol+"hist"
@@ -340,12 +341,12 @@ class Client:
         return response
 
 
-    def funding_loans_history(self,symbol=""):
+    def funding_loans_history(self,symbol="",**kwargs):
         """
         Inactive funds not used in positions. Limited to last 3 days.
         https://bitfinex.readme.io/v2/reference#rest-auth-funding-loans-hist
         """
-        body = {}
+        body = kwargs
         rawBody = json.dumps(body)
         addsymbol = "{}/".format(symbol) if symbol else ""
         path = "v2/auth/r/funding/loans/"+addsymbol+"hist"
@@ -365,12 +366,12 @@ class Client:
         return response
 
 
-    def funding_credits_history(self,symbol=""):
+    def funding_credits_history(self,symbol="",**kwargs):
         """
         Inactive funds used in positions. Limited to last 3 days.
         https://bitfinex.readme.io/v2/reference#rest-auth-funding-credits-hist
         """
-        body = {}
+        body = kwargs
         rawBody = json.dumps(body)
         addsymbol = "{}/".format(symbol) if symbol else ""
         path = "v2/auth/r/funding/credits/"+addsymbol+"hist"
@@ -378,12 +379,12 @@ class Client:
         return response
 
 
-    def funding_trades(self,symbol=""):
+    def funding_trades(self,symbol="",**kwargs):
         """
         Get funding trades
         https://bitfinex.readme.io/v2/reference#rest-auth-funding-trades-hist
         """
-        body = {}
+        body = kwargs
         rawBody = json.dumps(body)
         addsymbol = "{}/".format(symbol) if symbol else ""
         path = "v2/auth/r/funding/trades/"+addsymbol+"hist"
@@ -454,25 +455,6 @@ class Client:
         path = "v2/auth/r/alerts"
         response = self._post(path,rawBody,verify=True)
         return response
-
-    """
-        nonce    = self._nonce()
-        url=self.BASE_URL + path
-        payload = rawBody
-        headers  = self._headers(path, nonce, payload)
-        payload = {'type': 'price'}
-        response = requests.get(url, params=payload, timeout=TIMEOUT, headers=headers)
-        print(response.url)
-        print(response.headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            try:
-                content = response.json()
-            except JSONDecodeError:
-                content = response.text()
-            raise BitfinexException(response.status_code, response.reason, content)
-    """
 
 
     def alert_set(self,alert_type,symbol,price):
