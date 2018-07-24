@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #-*- coding: utf-8 -*-
 """Bitfinex Rest API V2 implementation"""
 # pylint: disable=R0904
@@ -586,7 +586,7 @@ class Client:
         Write user settings
         https://bitfinex.readme.io/v2/reference#user-settings-write
         """
-        pass
+        raise NotImplementedError
 
 
     def user_settings_delete(self, pkey):
@@ -594,4 +594,4 @@ class Client:
         Delete user settings
         https://bitfinex.readme.io/v2/reference#user-settings-delete
         """
-        pass
+        raise NotImplementedError

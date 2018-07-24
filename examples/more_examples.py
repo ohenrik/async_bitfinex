@@ -1,150 +1,161 @@
+"""examples on how to use different methods from the rest library"""
+
 from bitfinex.rest.client import Client
+from bitfinex.rest.restv2 import Client as Client2
 
-client = Client('apiKey','apiSecret')
 
-"""
+if __name__ == "__main__":
+    CLIENT = Client('apiKey', 'apiSecret')
+
+    """
     example on how to submit a rest request with multiple orders
-    The following will make a list with 3 orders to buy 100 iota at 3 dollars, 100 iota at 4 dollars and 100 iota at 5 dollars
+    The following will make a list with 3 orders to buy 100 iota at 3 dollars,
+    100 iota at 4 dollars and 100 iota at 5 dollars
     The list is sent to the method place_multiple_orders
-"""
-orders=[]
-for price in range(3, 6):
-    print (price)
-    payload = { "symbol": 'IOTUSD', "amount": '100', "price": str(price), "exchange": 'bitfinex', "side": 'buy', "type": 'limit' }
-    orders.append(payload)
+    """
+    ORDERS = []
+    for price in range(3, 6):
+        print(price)
+        payload = {
+            "symbol": 'IOTUSD',
+            "amount": '100',
+            "price": str(price),
+            "exchange": 'bitfinex',
+            "side": 'buy',
+            "type": 'limit'
+        }
+        ORDERS.append(payload)
 
-apiResponse = client.place_multiple_orders(orders)
-print(apiResponse)
-
-
-
-########## Bellow are examples for the methods using the REST API V2
-from bitfinex.rest.restv2 import Client
-btfx_client = Client('apiKey','apiSecret')
-"""
-    example on how to use the  the wallets_balance method
-"""
-wb = btfx_client.wallets_balance()
-for wallet in wb:
-    print(wallet)
+    APIRESPONSE = CLIENT.place_multiple_orders(ORDERS)
+    print(APIRESPONSE)
 
 
 
-"""
-    example on how to use the  the active_orders_rest2 method
-"""
-ao = btfx_client.active_orders_rest2("tIOTUSD")
-for order in ao:
-    print(order)
+    ########## Bellow are examples for the methods using the REST API V2
+
+    BTFXCLIENT = Client2('apiKey', 'apiSecret')
+
+
+    BTFXCLIENT.platform_status()             #method 1 Paltform Status
+    BTFXCLIENT.tickers(['tIOTUSD', 'fIOT'])  #method 2 list of tickers
+    BTFXCLIENT.ticker('tIOTUSD')             #method 3 ticker
+    BTFXCLIENT.trades('fIOT')                #method 4 public trades for symbol
+    BTFXCLIENT.trades('tIOTUSD')             #method 4 public trades for symbol
+    BTFXCLIENT.books('tIOTUSD')              #method 5 books for tIOTUSD with price precision 0
+    BTFXCLIENT.books('tIOTUSD', "P1")        #method 5 books for tIOTUSD with price precision 1
+
+    PARAMS = {
+        'key'     : 'funding.size',
+        'size'    : '1m',
+        'symbol'  : 'fUSD',
+        'section' : 'hist',
+        'sort'    : '0'
+    }
+    BTFXCLIENT.stats(**PARAMS)              #method 6 statistics
+
+    PARAMS = {
+        'key'     : 'credits.size',
+        'size'    : '1m',
+        'symbol'  : 'fUSD',
+        'section' : 'hist',
+        'sort'    : '0'
+    }
+    BTFXCLIENT.stats(**PARAMS)              #method 6 statistics
+
+    PARAMS = {
+        'key'     : 'pos.size',
+        'size'    : '1m',
+        'symbol'  : 'tIOTUSD',
+        'side'    : 'short',
+        'section' : 'hist',
+        'sort'    : '0'
+    }
+    BTFXCLIENT.stats(**PARAMS)              #method 6 statistics
+
+
+    PARAMS = {
+        'key'     : 'credits.size.sym',
+        'size'    : '1m',
+        'symbol'  : 'fUSD',
+        'symbol2' : 'tBTCUSD',
+        'section' : 'hist',
+        'sort'    : '0'
+    }
+    BTFXCLIENT.stats(**PARAMS)              #method 6 statistics
+
+
+    BTFXCLIENT.candles("1m", "tBTCUSD", "hist")            #method 7 candles
+    BTFXCLIENT.candles("1m", "tBTCUSD", "hist", limit='1') #method 7 candles
+
+
+    #example on how to use the  the wallets_balance method
+    WB = BTFXCLIENT.wallets_balance()
+    for wallet in WB:
+        print(wallet)
+
+
+    #example on how to use the  the active_orders_rest2 method
+    AO = BTFXCLIENT.active_orders("tIOTUSD")
+    for order in AO:
+        print(order)
+
+
+    #example on how to use the  the orders_history method
+    OH = BTFXCLIENT.orders_history("tIOTUSD")
+    for order in OH:
+        print(order)
+
+
+    #example on how to use the  the order_trades method
+    OT = BTFXCLIENT.order_trades("tIOTUSD", 14365232219)
+    for trade in OT:
+        print(trade)
+
+
+    #example on how to use the  the trades_history method
+    TH = BTFXCLIENT.trades_history("tIOTUSD")
+    for trade in TH:
+        print(trade)
 
 
 
-"""
-    example on how to use the  the orders_history method
-"""
-oh = btfx_client.orders_history("tIOTUSD")
-for order in oh:
-    print(order)
 
-
-
-"""
-    example on how to use the  the order_trades method
-"""
-ot = btfx_client.order_trades("tIOTUSD",14365232219)
-for trade in ot:
-    print(trade)
-
-
-
-"""
-    example on how to use the  the trades_history method
-"""
-th = btfx_client.trades_history("tIOTUSD")
-for trade in th:
-    print(trade)
+    BTFXCLIENT.foreign_exchange_rate(ccy1="IOT", ccy2="USD")
+    BTFXCLIENT.market_average_price(symbol="tBTCUSD", amount="100", period="1m")
 
 
 
 
-btfx_client.foreign_exchange_rate(ccy1="IOT",ccy2="USD")
-
-btfx_client.market_average_price(symbol="tBTCUSD",amount="100",period="1m")
 
 
-btfx_client.candles("1m","tBTCUSD","hist")
-btfx_client.candles("1m","tBTCUSD","hist",limit='1')
 
+    BTFXCLIENT.user_settings_read('?')
+    BTFXCLIENT.ledgers()
+    BTFXCLIENT.calc_available_balance('tIOTUSD', 1, 1.13, 'EXCHANGE')
+    BTFXCLIENT.alert_set('price', 'tIOTUSD', 1)
+    BTFXCLIENT.alert_delete('tIOTUSD', 1)
+    BTFXCLIENT.alert_list()
+    BTFXCLIENT.performance()
+    BTFXCLIENT.movements()
+    BTFXCLIENT.margin_info()
+    BTFXCLIENT.margin_info('base')
+    BTFXCLIENT.margin_info('tIOTUSD')
+    BTFXCLIENT.funding_info('fIOT')
+    BTFXCLIENT.funding_trades()
+    BTFXCLIENT.funding_credits()
+    BTFXCLIENT.funding_credits_history()
+    BTFXCLIENT.funding_loans()
+    BTFXCLIENT.funding_loans_history()
+    BTFXCLIENT.funding_offers()
+    BTFXCLIENT.funding_offers_history()
+    BTFXCLIENT.active_positions()
+    BTFXCLIENT.wallets_balance()
+    BTFXCLIENT.active_orders()
+    BTFXCLIENT.orders_history('tIOTUSD')
+    BTFXCLIENT.order_trades('tIOTUSD', 14395751815)
+    BTFXCLIENT.trades_history('tIOTUSD')
 
-params = {
-    'key'     : 'funding.size',
-    'size'    : '1m',
-    'symbol'  : 'fUSD',
-    'section' : 'hist',
-    'sort'    : '0'
-}
-btfx_client.stats(**params)
+    TRADES = BTFXCLIENT.trades_history('tIOTUSD', limit=10)
 
-params = {
-    'key'     : 'credits.size',
-    'size'    : '1m',
-    'symbol'  : 'fUSD',
-    'section' : 'hist',
-    'sort'    : '0'
-}
-btfx_client.stats(**params)
-
-params = {
-    'key'     : 'pos.size',
-    'size'    : '1m',
-    'symbol'  : 'tIOTUSD',
-    'side'    : 'short',
-    'section' : 'hist',
-    'sort'    : '0'
-}
-btfx_client.stats(**params)
-
-
-params = {
-    'key'     : 'credits.size.sym',
-    'size'    : '1m',
-    'symbol'  : 'fUSD',
-    'symbol2'  : 'tBTCUSD',
-    'section' : 'hist',
-    'sort'    : '0'
-}
-btfx_client.stats(**params)
-
-btfx_client.stats("funding.size","1m","tBTCUSD","long","hist","1")
-btfx_client.books('tIOTUSD')
-btfx_client.ticker('tIOTUSD')
-btfx_client.tickers(['tIOTUSD','fIOT'])
-btfx_client.platform_status()
-btfx_client.user_settings_read('?')
-btfx_client.ledgers()
-btfx_client.calc_available_balance("tIOTUSD",1,1.13,"EXCHANGE")
-btfx_client.alert_set("price","tIOTUSD",1)
-btfx_client.alert_delete("tIOTUSD",1)
-btfx_client.alert_list()
-btfx_client.performance()
-btfx_client.movements()
-btfx_client.margin_info()
-btfx_client.funding_info()
-btfx_client.funding_trades()
-btfx_client.funding_credits()
-btfx_client.funding_credits_history()
-btfx_client.funding_loans()
-btfx_client.funding_loans_history()
-btfx_client.funding_offers()
-btfx_client.funding_offers_history()
-btfx_client.active_positions()
-btfx_client.wallets_balance()
-btfx_client.active_orders()
-btfx_client.orders_history("tIOTUSD")
-btfx_client.order_trades('tIOTUSD',14395751815)
-btfx_client.trades_history("tIOTUSD")
-
-trades = btfx_client.trades_history("tIOTUSD",limit=10)
-
-for trade in trades:
-    print(trade)
+    for trade in TRADES:
+        print(trade)
