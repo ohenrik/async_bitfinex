@@ -1,4 +1,4 @@
-"""Tests for the v2 rest api""""
+"""Tests for the v2 rest api"""
 import json
 import pytest
 import requests_mock as rm
