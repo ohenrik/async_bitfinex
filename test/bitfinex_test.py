@@ -1,24 +1,20 @@
 # pylint: disable=W0621,C0111
 import os
 from decouple import config
+import json
 import pytest
 import mock
 import requests
-import urllib3
-from mocket.plugins.httpretty import HTTPretty, httprettified
+import requests_mock as rm
 from bitfinex.rest.client import Client
 
-httpretty = HTTPretty
-
-# Disable HTTPS warnings because all requests are mocked
-urllib3.disable_warnings()
 
 API_KEY = os.environ.get('API_KEY', config('API_KEY'))
 API_SECRET = os.environ.get('API_SECRET', config('API_SECRET'))
 
 @pytest.fixture()
 def client():
-    return Client()
+    return Client(key="testing", secret="testing")
 
 
 def test_should_have_server(client):
@@ -64,200 +60,231 @@ def test_should_have_url_for_with_path_arg_and_parameters(client):
     assert client.url_for(path, 'bar', {'a': 1}) == expected
 
 
-# @httprettified
-# def test_should_have_symbols(self):
-#     # mock out the request
-#     mock_body = '["btcusd","ltcusd","ltcbtc"]'
-#     url = self.client.url_for('symbols')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = ["btcusd","ltcusd","ltcbtc"]
-#     self.assertEqual(expected, self.client.symbols())
-#
-# @httprettified
-# def test_should_have_symbol_details(self):
-#     # mock out the request
-#     mock_body = '''[{
-#         "pair":"btcusd",
-#         "price_precision":5,
-#         "initial_margin":"30.0",
-#         "minimum_margin":"15.0",
-#         "maximum_order_size":"2000.0",
-#         "minimum_order_size":"0.01",
-#         "expiration":"NA"
-#         },{
-#         "pair":"ltcusd",
-#         "price_precision":5,
-#         "initial_margin":"30.0",
-#         "minimum_margin":"15.0",
-#         "maximum_order_size":"5000.0",
-#         "minimum_order_size":"0.1",
-#         "expiration":"NA"
-#         }]'''
-#     url = self.client.url_for('symbols_details')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#     expected = mock_body
-#     self.assertIsInstance(self.client.symbols_details(), list)
-#
-#
-# @httprettified
-# def test_should_have_ticker(self):
-#     # mock out the request
-#     mock_body = '{"mid":"562.56495","bid":"562.15","ask":"562.9799","last_price":"562.25","volume":"7842.11542563","timestamp":"1395552658.339936691"}'
-#     url = self.client.url_for('pubticker/%s', path_arg='btcusd')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = {
-#         "mid": "562.56495",
-#         "bid": "562.15",
-#         "ask": "562.9799",
-#         "last_price": "562.25",
-#         "volume": "7842.11542563",
-#         "timestamp": "1395552658.339936691"
-#     }
-#     # import pdb; pdb.set_trace()
-#     self.assertEqual(expected, self.client.ticker('btcusd'))
-#
-#
-# @httprettified
-# def test_should_have_today(self):
-#     # mock out the request
-#     mock_body = '{"low":"550.09","high":"572.2398","volume":"7305.33119836"}'
-#     url = self.client.url_for('today/%s', path_arg='btcusd')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = {
-#         "low": "550.09",
-#         "high": "572.2398",
-#         "volume": "7305.33119836"
-#     }
-#
-#     self.assertEqual(expected, self.client.today('btcusd'))
-#
-#
-# @httprettified
-# def test_should_have_stats(self):
-#     # mock out the request
-#     mock_body = '[{"period":1,"volume":"7410.27250155"},{"period":7,"volume":"52251.37118006"},{"period":30,"volume":"464505.07753251"}]'
-#     url = self.client.url_for('stats/%s', path_arg='btcusd')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = [
-#         {"period": 1,  "volume": "7410.27250155"},
-#         {"period": 7,  "volume": "52251.37118006"},
-#         {"period": 30, "volume": "464505.07753251"}
-#     ]
-#
-#     self.assertEqual(expected, self.client.stats('btcusd'))
-#
-#
-# @httprettified
-# def test_should_have_lendbook(self):
-#     # mock out the request
-#     mock_body = '{"bids":[{"rate":"5.475","amount":"15.03894663","period":30,"timestamp":"1395112149.0","frr":"No"},{"rate":"2.409","amount":"14.5121868","period":7,"timestamp":"1395497599.0","frr":"No"}],"asks":[{"rate":"6.351","amount":"15.5180735","period":5,"timestamp":"1395549996.0","frr":"No"},{"rate":"6.3588","amount":"626.94808249","period":30,"timestamp":"1395400654.0","frr":"Yes"}]}'
-#     url = self.client.url_for('lendbook/%s', 'btc')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = {
-#         "bids": [
-#             {"rate": "5.475", "amount": "15.03894663", "period": 30, "timestamp": "1395112149.0", "frr": False},
-#             {"rate": "2.409", "amount": "14.5121868", "period": 7, "timestamp": "1395497599.0", "frr": False}
-#         ],
-#         "asks": [
-#             {"rate": "6.351", "amount": "15.5180735", "period": 5, "timestamp": "1395549996.0", "frr": False},
-#             {"rate": "6.3588", "amount": "626.94808249", "period": 30, "timestamp": "1395400654.0", "frr": True}
-#         ]
-#     }
-#
-#     self.assertEqual(expected, self.client.lendbook('btc'))
-#
-#
-# @httprettified
-# def test_should_have_lendbook_with_parameters(self):
-#     # mock out the request
-#     mock_body = '{"bids":[{"rate":"5.475","amount":"15.03894663","period":30,"timestamp":"1395112149.0","frr":"No"},{"rate":"2.409","amount":"14.5121868","period":7,"timestamp":"1395497599.0","frr":"No"}],"asks":[]}'
-#     parameters = {'limit_bids': 2, 'limit_asks': 0}
-#     url = self.client.url_for('lendbook/%s', 'btc', parameters)
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = {
-#         "bids": [
-#             {"rate": "5.475", "amount": "15.03894663", "period": 30, "timestamp": "1395112149.0", "frr": False},
-#             {"rate": "2.409", "amount": "14.5121868", "period": 7, "timestamp": "1395497599.0", "frr": False}
-#         ],
-#         "asks": [
-#         ]
-#     }
-#
-#     self.assertEqual(expected, self.client.lendbook('btc', parameters))
-#
-#
-# @httprettified
-# def test_should_have_order_book(self):
-#     # mock out the request
-#     mock_body = '{"bids":[{"price":"562.2601","amount":"0.985","timestamp":"1395567556.0"}],"asks":[{"price":"563.001","amount":"0.3","timestamp":"1395532200.0"}]}'
-#     url = self.client.url_for('book/%s', 'btcusd')
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = {
-#         "bids": [
-#             {"price": "562.2601", "amount": "0.985", "timestamp": "1395567556.0"}
-#         ],
-#         "asks": [
-#             {"price": "563.001", "amount": "0.3", "timestamp": "1395532200.0"}
-#         ]
-#     }
-#
-#     self.assertEqual(expected, self.client.order_book('btcusd'))
-#
-#
-# @httprettified
-# def test_should_have_order_book_with_parameters(self):
-#     # mock out the request
-#     mock_body = '{"bids":[{"price":"562.2601","amount":"0.985","timestamp":"1395567556.0"}],"asks":[]}'
-#     parameters = {'limit_asks': 0}
-#     url = self.client.url_for('book/%s', 'btcusd', parameters)
-#     httpretty.register_uri(httpretty.GET, url, body=mock_body, status=200)
-#
-#     expected = {
-#         "bids": [
-#             {"price": "562.2601", "amount": "0.985", "timestamp": "1395567556.0"}
-#         ],
-#         "asks": []
-#     }
-#
-#     self.assertEqual(expected, self.client.order_book('btcusd', parameters))
-#
-#
-# class TestTradeClient(unittest.TestCase):
-#     def setUp(self):
-#         self.tc = Client(API_KEY, API_SECRET)
-#
-#     def test_instantiate_client(self):
-#         self.assertIsInstance(self.tc, Client)
-#
-#     @httprettified
-#     def test_get_active_orders_returns_json(self):
-#         mock_body = '[{"price":"562.2601","amount":"0.985","timestamp":"1395567556.0"}]'
-#         url = self.tc.url_for(path="orders")
-#         httpretty.register_uri(httpretty.POST, url, body=mock_body, status=200)
-#
-#         ao = self.tc.active_orders()
-#         self.assertIsInstance(ao, list)
-#
-#     @httprettified
-#     def test_get_active_positions_returns_json(self):
-#         mock_body = '[{"price":"562.2601","amount":"0.985","timestamp":"1395567556.0"}]'
-#         url = self.tc.url_for(path="positions")
-#         httpretty.register_uri(httpretty.POST, url, body=mock_body, status=200)
-#
-#         ap = self.tc.active_positions()
-#         self.assertIsInstance(ap, list)
+def test_should_have_symbols(client, requests_mock):
+    request_result = ["btcusd", "ltcusd", "ltcbtc"]
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text='["btcusd", "ltcusd", "ltcbtc"]'
+    )
+    assert client.symbols() == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/symbols'
+    )
 
-    # def test_get_full_history(self):
-    #     mock_body = '[{"price":"562.2601","amount":"0.985","timestamp":"1395567556.0"}]'
-    #     url = self.tc.url_for(path="orders")
-    #     httpretty.register_uri(httpretty.POST, url, body=mock_body, status=200)
-    #
-    #     ap = self.tc.active_positions()
-    #     self.assertIsInstance(ap, list)
+def test_should_have_symbol_details(client, requests_mock):
+    # mock out the request
+    request_result = '''[{
+        "pair":"btcusd",
+        "price_precision":5,
+        "initial_margin":"30.0",
+        "minimum_margin":"15.0",
+        "maximum_order_size":"2000.0",
+        "minimum_order_size":"0.01",
+        "expiration":"NA"
+        },{
+        "pair":"ltcusd",
+        "price_precision":5,
+        "initial_margin":"30.0",
+        "minimum_margin":"15.0",
+        "maximum_order_size":"5000.0",
+        "minimum_order_size":"0.1",
+        "expiration":"NA"
+        }]'''
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=request_result
+    )
+    result = client.symbols_details()
+    assert result == json.loads(request_result)
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/symbols_details'
+    )
+
+
+def test_should_have_ticker(client, requests_mock):
+    # mock out the request
+    request_result = {
+        "mid": "562.56495",
+        "bid": "562.15",
+        "ask": "562.9799",
+        "last_price": "562.25",
+        "volume": "7842.11542563",
+        "timestamp": "1395552658.339936691"
+    }
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.ticker('btcusd') == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/pubticker/btcusd'
+    )
+
+
+def test_should_have_today(client, requests_mock):
+    # mock out the request
+    request_result = {"low":"550.09","high":"572.2398","volume":"7305.33119836"}
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+
+    assert client.today('btcusd') == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/today/btcusd'
+    )
+
+
+def test_should_have_stats(client, requests_mock):
+    request_result = [
+        {"period":1, "volume":"7410.27250155"},
+        {"period":7, "volume":"52251.37118006"},
+        {"period":30, "volume":"464505.07753251"}
+    ]
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.stats('btcusd') == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/stats/btcusd'
+    )
+
+def test_should_have_lendbook(client, requests_mock):
+    request_result = {
+        "bids":[
+            {"rate":"5.475", "amount":"15.03894663", "period":30,
+             "timestamp":"1395112149.0", "frr": False},
+            {"rate":"2.409", "amount":"14.5121868", "period":7,
+             "timestamp":"1395497599.0", "frr":False}
+        ],
+        "asks":[
+            {"rate":"6.351", "amount":"15.5180735", "period":5,
+             "timestamp":"1395549996.0", "frr":False},
+            {"rate":"6.3588", "amount":"626.94808249", "period":30,
+             "timestamp":"1395400654.0", "frr": False}
+        ]
+    }
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.lendbook('btc') == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/lendbook/btc'
+    )
+
+
+def test_should_have_lendbook_with_parameters(client, requests_mock):
+    request_result = '{"bids":[{"rate":"5.475","amount":"15.03894663","period":30,\
+        "timestamp":"1395112149.0","frr":"No"},{"rate":"2.409",\
+        "amount":"14.5121868","period":7,"timestamp":"1395497599.0",\
+        "frr":"No"}],"asks":[]}'
+    parameters = {'limit_bids': 2, 'limit_asks': 0}
+    expected = {
+        "bids": [
+            {"rate": "5.475", "amount": "15.03894663", "period": 30,
+             "timestamp": "1395112149.0", "frr": False},
+            {"rate": "2.409", "amount": "14.5121868", "period": 7,
+             "timestamp": "1395497599.0", "frr": False}
+        ],
+        "asks": []
+    }
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=request_result
+    )
+    assert client.lendbook('btc', parameters) == expected
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/lendbook/btc?limit_asks=0&limit_bids=2'
+    )
+
+def test_should_have_order_book(client, requests_mock):
+    request_result = {
+        "bids": [
+            {"price": "562.2601", "amount": "0.985", "timestamp": "1395567556.0"}
+        ],
+        "asks": [
+            {"price": "563.001", "amount": "0.3", "timestamp": "1395532200.0"}
+        ]
+    }
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.order_book('btcusd') == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/book/btcusd'
+    )
+
+def test_should_have_order_book_with_parameters(client, requests_mock):
+    parameters = {'limit_asks': 0}
+    request_result = {
+        "bids": [
+            {"price": "562.2601", "amount": "0.985", "timestamp": "1395567556.0"}
+        ],
+        "asks": []
+    }
+
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.order_book('btcusd', parameters) == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/book/btcusd?limit_asks=0'
+    )
+
+
+def test_get_active_orders_returns_json(client, requests_mock):
+    request_result = [{
+        "price":"562.2601",
+        "amount":"0.985",
+        "timestamp":"1395567556.0"
+    }]
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.active_orders() == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/orders'
+    )
+
+def test_get_active_positions_returns_json(client, requests_mock):
+    request_result = [{
+        "price":"562.2601",
+        "amount":"0.985",
+        "timestamp":"1395567556.0"
+    }]
+    requests_mock.register_uri(
+        rm.ANY,
+        rm.ANY,
+        text=json.dumps(request_result)
+    )
+    assert client.active_positions() == request_result
+    assert requests_mock.request_history[0].url == (
+        'https://api.bitfinex.com/v1/positions'
+    )
+
+# def test_get_full_history(client, requests_mock):
+#     mock_body = [{
+#         "price":"562.2601",
+#         "amount":"0.985",
+#         "timestamp":"1395567556.0"
+#     }]
+#     url = client.url_for(path="orders")
+#     httpretty.register_uri(httpretty.POST, url, body=mock_body, status=200)
+#
+#     ap = client.active_positions()
+#     self.assertIsInstance(ap, list)
