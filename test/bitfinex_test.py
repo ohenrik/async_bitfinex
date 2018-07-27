@@ -3,8 +3,6 @@ import os
 from decouple import config
 import json
 import pytest
-import mock
-import requests
 import requests_mock as rm
 from bitfinex.rest.client import Client
 
