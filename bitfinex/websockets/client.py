@@ -174,7 +174,19 @@ class WssClient(BitfinexSocketManager):
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         return self._start_socket("auth", payload, callback)
 
-    def subscribe_to_trades(self, symbol):
+    def subscribe_to_ticker(self, symbol, callback):
+        """Subscribe to the passed pair's OHLC data channel.
+        """
+        id_ = "_".join(["ticks", symbol])
+        data = {
+            'event': 'subscribe',
+            'channel': 'ticker',
+            'symbol': symbol,      
+        }
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        return self._start_socket(id_, payload, callback)
+
+    def subscribe_to_trades(self, symbol, callback):
         """Subscribe to the passed pair's OHLC data channel.
         """
         id_ = "_".join(["trades", symbol])
