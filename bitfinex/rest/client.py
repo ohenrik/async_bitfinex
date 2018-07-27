@@ -39,6 +39,7 @@ class Client:
     def __init__(self, key=None, secret=None, nonce_multiplier=1.0):
         assert type(nonce_multiplier) == float, "nonce_multiplier must be decimal"
         self.URL = "%s://%s/%s" % (PROTOCOL, HOST, VERSION)
+        self.BASE_URL = "%s://%s/" % (PROTOCOL, HOST)
         self.KEY = key
         self.SECRET = secret
         self.nonce_multiplier = nonce_multiplier
@@ -235,6 +236,21 @@ class Client:
         }
         response = self._post("position/claim", payload=payload, verify=True)
         return response
+
+    def close_position(self, position_id):
+        """
+        Closes the selected position with a market order.
+        :param position_id:
+        :return:
+        """
+        payload = {
+            "request": "/v1/position/close",
+            "nonce": self._nonce(),
+            "position_id": position_id
+        }
+        response = self._post("position/close", payload=payload, verify=True)
+        return response
+
 
     def past_trades(self, timestamp='0.0', symbol='btcusd'):
         """
