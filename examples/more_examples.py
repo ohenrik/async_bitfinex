@@ -31,11 +31,10 @@ if __name__ == "__main__":
 
 
 
-    ########## Bellow are examples for the methods using the REST API V2
-
+    ########## REST API V2 examples
     BTFXCLIENT = Client2('apiKey', 'apiSecret')
 
-
+    ##### REST PUBLIC ENDPOINTS
     BTFXCLIENT.platform_status()             #method 1 Paltform Status
     BTFXCLIENT.tickers(['tIOTUSD', 'fIOT'])  #method 2 list of tickers
     BTFXCLIENT.ticker('tIOTUSD')             #method 3 ticker
@@ -88,74 +87,72 @@ if __name__ == "__main__":
     BTFXCLIENT.candles("1m", "tBTCUSD", "hist", limit='1') #method 7 candles
 
 
-    #example on how to use the  the wallets_balance method
-    WB = BTFXCLIENT.wallets_balance()
+
+
+
+
+    ##### REST CALCULATION ENDPOINTS
+    BTFXCLIENT.market_average_price(symbol="tBTCUSD", amount="100", period="1m") # method 1
+    BTFXCLIENT.foreign_exchange_rate(ccy1="IOT", ccy2="USD")                     # method 2
+
+
+
+
+    ##### REST AUTHENTICATED ENDPOINTS
+    WB = BTFXCLIENT.wallets_balance()                                 #method 1
     for wallet in WB:
         print(wallet)
 
-
-    #example on how to use the  the active_orders_rest2 method
-    AO = BTFXCLIENT.active_orders("tIOTUSD")
+    AO = BTFXCLIENT.active_orders("tIOTUSD")                          #method 2
     for order in AO:
         print(order)
 
-
-    #example on how to use the  the orders_history method
-    OH = BTFXCLIENT.orders_history("tIOTUSD")
+    OH = BTFXCLIENT.orders_history("tIOTUSD")                         #method 3
     for order in OH:
         print(order)
 
-
-    #example on how to use the  the order_trades method
-    OT = BTFXCLIENT.order_trades("tIOTUSD", 14365232219)
+    OT = BTFXCLIENT.order_trades("tIOTUSD", 14395751815)              #method 4
     for trade in OT:
         print(trade)
 
-
-    #example on how to use the  the trades_history method
+    TRADES = BTFXCLIENT.trades_history('tIOTUSD', limit=10)           #method 5
     TH = BTFXCLIENT.trades_history("tIOTUSD")
     for trade in TH:
         print(trade)
 
+    BTFXCLIENT.active_positions()                                     #method 6
 
+    BTFXCLIENT.funding_offers()                                       #method 7
+    BTFXCLIENT.funding_offers("fIOT")                                 #method 7
 
+    BTFXCLIENT.funding_offers_history('fOMG')                         #method 8
 
-    BTFXCLIENT.foreign_exchange_rate(ccy1="IOT", ccy2="USD")
-    BTFXCLIENT.market_average_price(symbol="tBTCUSD", amount="100", period="1m")
+    BTFXCLIENT.funding_loans('fOMG')                                  #methon 9
 
+    BTFXCLIENT.funding_loans_history('fOMG')                          #method 10
 
+    BTFXCLIENT.funding_credits('fUSD')                                #method 11
 
+    BTFXCLIENT.funding_credits_history('fUSD')                        #method 12
 
+    BTFXCLIENT.funding_trades('fUSD')                                 #method 13
 
+    BTFXCLIENT.margin_info()                                          #method 14
+    BTFXCLIENT.margin_info('base')                                    #method 14
+    BTFXCLIENT.margin_info('tIOTUSD')                                 #method 14
 
+    BTFXCLIENT.funding_info('fIOT')                                   #method 15
 
-    BTFXCLIENT.user_settings_read('?')
-    BTFXCLIENT.ledgers()
-    BTFXCLIENT.calc_available_balance('tIOTUSD', 1, 1.13, 'EXCHANGE')
-    BTFXCLIENT.alert_set('price', 'tIOTUSD', 1)
-    BTFXCLIENT.alert_delete('tIOTUSD', 1)
-    BTFXCLIENT.alert_list()
-    BTFXCLIENT.performance()
-    BTFXCLIENT.movements()
-    BTFXCLIENT.margin_info()
-    BTFXCLIENT.margin_info('base')
-    BTFXCLIENT.margin_info('tIOTUSD')
-    BTFXCLIENT.funding_info('fIOT')
-    BTFXCLIENT.funding_trades()
-    BTFXCLIENT.funding_credits()
-    BTFXCLIENT.funding_credits_history()
-    BTFXCLIENT.funding_loans()
-    BTFXCLIENT.funding_loans_history()
-    BTFXCLIENT.funding_offers()
-    BTFXCLIENT.funding_offers_history()
-    BTFXCLIENT.active_positions()
-    BTFXCLIENT.wallets_balance()
-    BTFXCLIENT.active_orders()
-    BTFXCLIENT.orders_history('tIOTUSD')
-    BTFXCLIENT.order_trades('tIOTUSD', 14395751815)
-    BTFXCLIENT.trades_history('tIOTUSD')
+    BTFXCLIENT.movements()                                            #method 16
 
-    TRADES = BTFXCLIENT.trades_history('tIOTUSD', limit=10)
+    BTFXCLIENT.performance()                                          #method 17
 
-    for trade in TRADES:
-        print(trade)
+    BTFXCLIENT.alert_list()                                           #method 18
+
+    BTFXCLIENT.alert_set('price', 'tIOTUSD', 3)                       #method 19
+
+    BTFXCLIENT.alert_delete('tIOTUSD', 1)                             #method 20
+
+    BTFXCLIENT.calc_available_balance('tIOTUSD', 1, 0.02, 'EXCHANGE') #method 21
+
+    BTFXCLIENT.ledgers('IOT')                                         #method 22
