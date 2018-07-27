@@ -133,7 +133,7 @@ class Client:
         """
         assert isinstance(symbol_list, list), "symbol_list must be of type list"
         assert symbol_list, "symbol_list must have at least one symbol"
-        path = "v2/tickers?symbols={}".format(",".join(symbol_list)
+        path = "v2/tickers?symbols={}".format(",".join(symbol_list))
         response = self._get(path)
         return response
 
