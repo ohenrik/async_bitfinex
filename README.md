@@ -64,11 +64,6 @@ through the authenticated channel.
     bm.new_order(order_type="EXCHANGE LIMIT", pair="BTCUSD", amount="0.1", price="1", hidden=0)
 
 
-So far only the auth channel and candle stick channel is implemented.
-
-For sending messages I have only implemented new_order and cancel_order.
-I will add documentation for this later, for now take a look at the source code.
-
 ## Compatibility
 
 This code has been tested on
@@ -87,14 +82,9 @@ so this should start your tests:
 
     pytest -v
 
-However... Due to the fact that Mocket (python-mocket) crashes whenever
-pyopenssl is installed. Tests related to the rest library does now work unless
-you uninstall pyopenssl.
 
 ## TODO
 
-- Implement all API calls that Bitfinex make available (v1).
-- Add v2 REST api logic
 - Add the rest of Websocket messages and channels.
 
 ## Contributing
