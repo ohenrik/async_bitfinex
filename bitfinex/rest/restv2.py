@@ -133,9 +133,7 @@ class Client:
         """
         assert isinstance(symbol_list, list), "symbol_list must be of type list"
         assert symbol_list, "symbol_list must have at least one symbol"
-        path = "v2/tickers?symbols="+symbol_list[0]
-        for index in range(1, len(symbol_list)):
-            path += ","+str(symbol_list[index])
+        path = "v2/tickers?symbols={}".format(",".join(symbol_list)
         response = self._get(path)
         return response
 
@@ -173,7 +171,7 @@ class Client:
                     by calling the /symbols endpoint.
             precision : Level of price aggregation (P0, P1, P2, P3, R0)
         """
-        path = "v2/book/"+symbol+"/"+precision
+        path = f"v2/book/{symbol}/{precision}"
         response = self._get(path)
         return response
 
