@@ -304,7 +304,7 @@ class Client:
 
         body = kwargs
         raw_body = json.dumps(body)
-        path = "v2/auth/r/orders/"+trade_pair+"hist"
+        path = "v2/auth/r/orders/"+trade_pair+"/hist"
         response = self._post(path, raw_body, verify=True)
         return response
 
