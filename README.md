@@ -2,24 +2,11 @@
 
 **Continuation of**: https://github.com/scottjbarr/bitfinex
 
-A Python client for the Bitfinex API.
-
-Most of the unauthenticated calls have been implemented.  It is planned to
-implement the remainder of the API.
+A Python client for the Bitfinex API v1 and v2 + websockets for v2.
 
 ## Installation
 
-    pip install git+https://github.com/ohenrik/bitfinex
-
-
-
-## Poll The Order Book
-
-Run the ```bitfinex-poll-orderbook``` script in a terminal.
-
-Press ```Ctrl-c``` to exit.
-
-    bitfinex-poll-orderbook
+    pip install bitfinex-v2
 
 ## Setup
 
@@ -27,19 +14,32 @@ Install the libs
 
     pip install -r ./requirements.txt
 
-## Usage REST API (v1)
+## Documentation
 
-    from bitfinex import Client
-    client = Client(os.environ.get('BITFINEX_KEY'), os.environ.get('BITFINEX_SECRET'))
+Full documentation coming soon. Please refer to the code to see function
+names etc. for now.
 
-    self.client.ticker('btcusd')
-    >>>>  { "mid": "562.56495",
-            "bid": "562.15",
-            "ask": "562.9799",
-            "last_price": "562.25",
-            "volume": "7842.11542563",
-            "timestamp": "1395552658.339936691"
-          }
+
+## Usage REST API (v2)
+
+    from bitfinex import ClientV2 as Client
+    client = Client(
+        os.environ.get('BITFINEX_KEY'),
+        os.environ.get('BITFINEX_SECRET')
+    )
+
+    client.ticker('tBTCUSD')
+    >>>>  [0.00011989,
+          224267.1563644,
+          0.00012015,
+          265388.46405117,
+          -8.12e-06,
+          -0.0634,
+          0.00012,
+          3206446.72556849,
+          0.00012812,
+          0.00011545
+    ]
 
 ## Usage Websockets API (v2)
 
@@ -56,6 +56,7 @@ through the authenticated channel.
     # Authenticate and listen to account feedback
     # print is the callback method. You probably want to do something else.
     bm.authenticate(print)
+
     # Subscribe to candles (starts with a set of completed candles, then updates with last completed + updated uncompleted candle)
     bm.subscribe_to_candles("BTCUSD", "1m", print)
     bm.start()
@@ -63,12 +64,33 @@ through the authenticated channel.
     # Send new order
     bm.new_order(order_type="EXCHANGE LIMIT", pair="BTCUSD", amount="0.1", price="1", hidden=0)
 
+For sending messages I have only implemented new_order and cancel_order.
+I will add documentation for this later, for now take a look at the source code.
+
+
+## Usage REST API (v1)
+
+    from bitfinex import ClientV1 as Client
+    client = Client(
+      os.environ.get('BITFINEX_KEY'),
+      os.environ.get('BITFINEX_SECRET')
+    )
+
+    client.ticker('btcusd')
+    >>>>  { "mid": "562.56495",
+            "bid": "562.15",
+            "ask": "562.9799",
+            "last_price": "562.25",
+            "volume": "7842.11542563",
+            "timestamp": "1395552658.339936691"
+          }
+
 
 ## Compatibility
 
 This code has been tested on
 
-- Python 3.6.3
+- Python 3.6
 
 But the REST library will probably work on python 2.7 as well.
 
@@ -82,10 +104,15 @@ so this should start your tests:
 
     pytest -v
 
+However... Due to the fact that Mocket (python-mocket) crashes whenever
+pyopenssl is installed. Tests related to the rest library does now work unless
+you uninstall pyopenssl.
 
 ## TODO
 
 - Add the rest of Websocket messages and channels.
+- Possible parsing improvement for v2 responses.
+- Implement all API calls that Bitfinex make available (v1).
 
 ## Contributing
 

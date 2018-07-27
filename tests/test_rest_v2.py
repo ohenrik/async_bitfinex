@@ -2,7 +2,7 @@
 import json
 import pytest
 import requests_mock as rmock
-from bitfinex.rest.restv2 import Client
+from bitfinex.rest import ClientV2 as Client
 
 # pylint: disable=W0621,C0111
 

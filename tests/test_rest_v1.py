@@ -4,7 +4,7 @@ from decouple import config
 import json
 import pytest
 import requests_mock as rm
-from bitfinex.rest.client import Client
+from bitfinex.rest import ClientV1 as Client
 
 
 API_KEY = os.environ.get('API_KEY', config('API_KEY'))
