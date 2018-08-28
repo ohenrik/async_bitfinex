@@ -157,8 +157,8 @@ class WssClient(BitfinexSocketManager):
         auth_payload = 'AUTH{}'.format(nonce)
         signature = hmac.new(
             self.secret.encode(), #settings.API_SECRET.encode()
-            msg = auth_payload.encode('utf8'),
-            digestmod = hashlib.sha384
+            msg=auth_payload.encode('utf8'),
+            digestmod=hashlib.sha384
         ).hexdigest()
         data = {
             # docs: http://bit.ly/2CEx9bM
@@ -171,40 +171,56 @@ class WssClient(BitfinexSocketManager):
         }
         if filters:
             data['filter'] = filters
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket("auth", payload, callback)
 
     def subscribe_to_ticker(self, symbol, callback):
-        """Subscribe to the passed pair's OHLC data channel.
+        """Subscribe to the passed symbol ticks data channel.
         """
-        id_ = "_".join(["ticks", symbol])
+        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        id_ = "_".join(["ticker", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'ticker',
-            'symbol': symbol,      
+            'symbol': symbol,
         }
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
     def subscribe_to_trades(self, symbol, callback):
-        """Subscribe to the passed pair's OHLC data channel.
+        """Subscribe to the passed symbol trades data channel.
         """
+        symbol = 't' + symbol if not symbol.startswith('t') else symbol
         id_ = "_".join(["trades", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'trades',
             'symbol': symbol,
         }
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
+    # TODO: Switch "pair" to "symbol" in new major version
     def subscribe_to_candles(self, pair, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
-        :param pair: str, Symbol pair to request data for
-        :param timeframe: str, {1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h,
-                                1D, 7D, 14D, 1M}
-        :param kwargs:
-        :return:
+
+        Parameters
+        ----------
+        pair : str
+            Symbol pair to request data for
+
+        timeframe : str
+            Accepted values as strings {1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h,
+            1D, 7D, 14D, 1M}
+
+        callback : func
+            A function to use as callback
+
+        Returns
+        -------
+        str
+            The socket identifier.
+
         """
 
         valid_tfs = ['1m', '5m', '15m', '30m', '1h', '3h', '6h', '12h', '1D',
@@ -237,7 +253,40 @@ class WssClient(BitfinexSocketManager):
         self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
         return client_cid
 
-    def new_order_op(self, order_type, pair, amount, price, hidden=0, flags=list()):
+    def new_order_op(self, order_type, pair, amount, price, hidden=0, flags=None):
+        """
+        Create new order operation
+
+        Parameters
+        ----------
+        order_type : str
+            Order type. Must be one of: "LIMIT", "STOP", "MARKET",
+            "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "MARKET"
+            prepended to it.
+
+        pair : str
+            The currency pair to be traded. e.g. BTCUSD
+
+        amount :  float
+            The amount to be traided.
+
+        price : float
+            The price to buy at. Will be ignored for market orders.
+
+        hidden : bool
+            Whether or not to use the hidden order type.
+
+        flags : list
+            A list of integers for the different flags. Will be added together
+            into a unique integer.
+
+        Returns
+        -------
+        dict
+            A dict containing the order detials. Used in new_order and for
+            creating multiorders.
+        """
+        flags = flags or []
         client_order_id = wss_utils.UtcNow()
         return {
             'cid': client_order_id,
@@ -250,6 +299,38 @@ class WssClient(BitfinexSocketManager):
         }
 
     def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
+        """
+        Create new order.
+
+        Parameters
+        ----------
+        order_type : str
+            Order type. Must be one of: "LIMIT", "STOP", "MARKET",
+            "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "MARKET"
+            prepended to it.
+
+        pair : str
+            The currency pair to be traded. e.g. BTCUSD
+
+        amount :  float
+            The amount to be traided.
+
+        price : float
+            The price to buy at. Will be ignored for market orders.
+
+        hidden : bool
+            Whether or not to use the hidden order type.
+
+        flags : list
+            A list of integers for the different flags. Will be added together
+            into a unique integer.
+
+        Returns
+        -------
+        int
+            Order client id (cid). The CID is also a mts date stamp of when the
+            order was created.
+        """
         operation = self.new_order_op(order_type, pair, amount, price, 0, flags)
         data = [
             0,
@@ -264,12 +345,13 @@ class WssClient(BitfinexSocketManager):
     def multi_order(self, operations):
         """Multi order operation.
 
-        Args:
-            operations (list):
-                a list of operations. Read more here:
-                https://bitfinex.readme.io/v2/reference#ws-input-order-multi-op
-                Hint. you can use the self.new_order_op() for easy order
-                operation creation.
+        Parameters
+        ----------
+        operations : list
+            a list of operations. Read more here:
+            https://bitfinex.readme.io/v2/reference#ws-input-order-multi-op
+            Hint. you can use the self.new_order_op() for easy order
+            operation creation.
         """
         data = [
             0,
@@ -282,6 +364,13 @@ class WssClient(BitfinexSocketManager):
         return [order[1].get("cid", None) for order in operations]
 
     def cancel_order(self, order_id):
+        """Cancel order
+
+        Parameters
+        ----------
+        order_id : int, str
+            Order id created by Bitfinex
+        """
         data = [
             0,
             wss_utils.get_notification_code('order cancel'),
@@ -298,11 +387,13 @@ class WssClient(BitfinexSocketManager):
         """Cancel order using the client id and the date of the cid. Both are
         returned from the new_order command from this library.
 
-        Attr:
-            order_cid (str):
-                cid string. e.g. "1234154"
-            order_date (str):
-                Iso formated order date. e.g. "2012-01-23"
+        Parameters
+        ----------
+        order_cid : str
+            cid string. e.g. "1234154"
+
+        order_date : str
+            Iso formated order date. e.g. "2012-01-23"
         """
         data = [
             0,
