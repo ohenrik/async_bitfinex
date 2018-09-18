@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.5.1'
+VERSION = '0.5.2'
 
 # Runtime dependencies. See requirements.txt for development dependencies.
 DEPENDENCIES = [
@@ -12,15 +12,10 @@ DEPENDENCIES = [
     "service_identity",
 ]
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
-
 setup(
     name='bitfinex-v2',
     version=VERSION,
     description='Python client for the Bitfinex API',
-    long_description=long_description,
-    long_description_content_type="text/markdown",
     author='Ole Henrik Skogstrøm',
     author_email='henrik@amplify.no',
     url='https://github.com/ohenrik/bitfinex',
