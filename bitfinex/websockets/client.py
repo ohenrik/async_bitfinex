@@ -105,8 +105,18 @@ class BitfinexSocketManager(threading.Thread):
         factory.reconnect = True
         context_factory = ssl.ClientContextFactory()
         self.factories[id_] = factory
+        reactor.callFromThread(self.add_connection, id_)
+
+
+    def add_connection(self, id_):
+        """
+        Convenience function to connect and store the resulting
+        connector.
+        """
+        factory = self.factories[id_]
+        context_factory = ssl.ClientContextFactory()
         self._conns[id_] = connectWS(factory, context_factory)
-        return self._conns[id_]
+
 
     def stop_socket(self, conn_key):
         """Stop a websocket given the connection key
