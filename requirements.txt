@@ -14,3 +14,4 @@ autobahn
 pyopenssl
 service_identity
 pytest
+requests_mock
