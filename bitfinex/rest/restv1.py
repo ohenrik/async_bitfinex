@@ -100,6 +100,8 @@ class Client:
         response = requests.post(url, headers=signed_payload, verify=True)
         if response.status_code == 200:
             return response.json()
+        elif response.status_code == 400:
+            return response.json()
         else:
             try:
                 content = response.json()
