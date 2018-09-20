@@ -209,7 +209,21 @@ class WssClient(BitfinexSocketManager):
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
-
+    
+    #Precision: R0, P0, P1, P2, P3
+    def subscribe_to_orderbook(self, symbol, precision, callback):
+        """Subscribe to the passed pair's OHLC data channel.
+        """
+        id_ = "_".join(["order", symbol])
+        data = {
+            'event': 'subscribe',
+            "channel": "book",
+            "prec": precision,
+            'symbol': symbol,
+        }
+        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        return self._start_socket(id_, payload, callback)
+    
     # TODO: Switch "pair" to "symbol" in new major version
     def subscribe_to_candles(self, pair, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
