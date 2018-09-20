@@ -414,14 +414,29 @@ class WssClient(BitfinexSocketManager):
 
         Parameters
         ----------
-        id : int64           Order ID
-        gid : int32           Group Order ID
-        price : decimal string  Price
-        amount : decimal string  Amount
-        delta : decimal string  Change of amount
-        price_aux_limit : decimal string  Auxiliary limit price
-        price_trailing : decimal string  Trailing price delta
-        tif : datetime string Time-In-Force: datetime for automatic order cancellation (ie. 2020-01-01 10:45:23)
+        id : int64
+            Order ID
+            
+        gid : int32
+            Group Order ID
+
+        price : decimal string
+            Price
+
+        amount : decimal string
+            Amount
+
+        delta : decimal string
+            Change of amount
+
+        price_aux_limit : decimal string
+            Auxiliary limit price
+
+        price_trailing : decimal string
+            Trailing price delta
+
+        tif : datetime string
+            Time-In-Force: datetime for automatic order cancellation (ie. 2020-01-01 10:45:23)
         """
         data = [
             0,
