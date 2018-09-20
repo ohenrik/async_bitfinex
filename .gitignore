@@ -7,7 +7,8 @@ __pycache__
 bitfinex.egg-info
 dist
 .pytest_cache/
-
+notebooks/
+.envrc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
