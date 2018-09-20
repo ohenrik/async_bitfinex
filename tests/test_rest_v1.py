@@ -7,8 +7,8 @@ import requests_mock as rm
 from bitfinex.rest import ClientV1 as Client
 
 
-API_KEY = os.environ.get('API_KEY', config('API_KEY'))
-API_SECRET = os.environ.get('API_SECRET', config('API_SECRET'))
+API_KEY = "test" #os.environ.get('API_KEY', config('API_KEY'))
+API_SECRET = "test" #os.environ.get('API_SECRET', config('API_SECRET'))
 
 @pytest.fixture()
 def client():

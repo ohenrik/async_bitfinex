@@ -407,3 +407,78 @@ class WssClient(BitfinexSocketManager):
         ]
         payload = json.dumps(data, ensure_ascii = False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+
+
+    def update_order(self, **order_settings):
+        """Update order using the order id
+
+        Parameters
+        ----------
+        id : int64
+            Order ID
+            
+        gid : int32
+            Group Order ID
+
+        price : decimal string
+            Price
+
+        amount : decimal string
+            Amount
+
+        delta : decimal string
+            Change of amount
+
+        price_aux_limit : decimal string
+            Auxiliary limit price
+
+        price_trailing : decimal string
+            Trailing price delta
+
+        tif : datetime string
+            Time-In-Force: datetime for automatic order cancellation (ie. 2020-01-01 10:45:23)
+        """
+        data = [
+            0,
+            wss_utils.get_notification_code('order update'),
+            None,
+            order_settings
+        ]
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+
+
+    def calc(self, *calculations):
+        """This message will be used by clients to trigger specific calculations,
+                so we don't end up in calculating data that is not usually needed.
+           You can request calculations to the websocket server that sends you the same message,
+                with the required fields.
+           Possible prefixes:
+                margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
+                funding_sym_SYMBOL
+                position_SYMBOL
+                wallet_WALLET-TYPE_CURRENCY
+           NOTE
+                Calculations are on demand, so no more streaming of unnecessary data.
+                Websocket server allows up to 30 calculations per batch.
+                If the client sends too many concurrent requests (or tries to spam) requests,
+                it will receive an error and potentially a disconnection.
+                The Websocket server performs a maximum of 8 calculations per second per client.
+
+            Parameters
+            ----------
+            *calculations : str
+                margin_sym_SYMBOL
+                funding_sym_SYMBOL
+                position_SYMBOL
+                wallet_WALLET-TYPE_CURRENCY
+        """
+
+        data = [
+            0,
+            'calc',
+            None,
+            calculations
+        ]
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
