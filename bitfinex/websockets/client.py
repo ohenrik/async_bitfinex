@@ -212,7 +212,7 @@ class WssClient(BitfinexSocketManager):
 
     #Precision: R0, P0, P1, P2, P3
     def subscribe_to_orderbook(self, symbol, precision, callback):
-        """Subscribe to the passed pair's OHLC data channel.
+        """Subscribe to the orderbook of a given pair.
 
         Parameters
         ----------
