@@ -289,7 +289,9 @@ class WssClient(BitfinexSocketManager):
         self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
         return client_cid
 
-    def new_order_op(self, order_type, pair, amount, price, hidden=0, flags=None):
+    def new_order_op(self, order_type, pair, amount, price, price_trailing=None,
+                     price_aux_limit=None, price_oco_stop=None, hidden=0,
+                     flags=None, tif=None):
         """
         Create new order operation
 
@@ -324,17 +326,32 @@ class WssClient(BitfinexSocketManager):
         """
         flags = flags or []
         client_order_id = wss_utils.UtcNow()
-        return {
+        order_op = {
             'cid': client_order_id,
             'type': order_type,
             'symbol': wss_utils.order_pair(pair),
             'amount': amount,
             'price': price,
             'hidden': hidden,
-            "flags": sum(flags)
+            "flags": sum(flags),
         }
+        if price_trailing:
+            order_op['price_trailing'] = price_trailing
 
-    def new_order(self, order_type, pair, amount, price, hidden=0, flags=list()):
+        if price_aux_limit:
+            order_op['price_aux_limit'] = price_aux_limit
+
+        if price_oco_stop:
+            order_op['price_oco_stop'] = price_oco_stop
+
+        if tif:
+            order_op['tif'] = tif
+
+        return order_op
+
+    def new_order(self, order_type, pair, amount, price, price_trailing=None,
+                  price_aux_limit=None, price_oco_stop=None, hidden=0,
+                  flags=None, tif=None):
         """
         Create new order.
 
@@ -348,11 +365,20 @@ class WssClient(BitfinexSocketManager):
         pair : str
             The currency pair to be traded. e.g. BTCUSD
 
-        amount :  float
+        amount :  decimal string
             The amount to be traided.
 
-        price : float
+        price : decimal string
             The price to buy at. Will be ignored for market orders.
+
+        price_trailing : decimal string
+        	The trailing price
+
+        price_aux_limit : decimal string
+            Auxiliary Limit price (for STOP LIMIT)
+
+        price_oco_stop : decimal string
+            OCO stop price
 
         hidden : bool
             Whether or not to use the hidden order type.
@@ -361,13 +387,26 @@ class WssClient(BitfinexSocketManager):
             A list of integers for the different flags. Will be added together
             into a unique integer.
 
+        tif : datetime string
+
         Returns
         -------
         int
             Order client id (cid). The CID is also a mts date stamp of when the
             order was created.
         """
-        operation = self.new_order_op(order_type, pair, amount, price, 0, flags)
+        operation = self.new_order_op(
+            order_type=order_type,
+            pair=pair,
+            amount=amount,
+            price=price,
+            price_trailing=price_trailing,
+            price_aux_limit=price_aux_limit,
+            price_oco_stop=price_oco_stop,
+            hidden=hidden,
+            flags=flags,
+            tif=tif
+        )
         data = [
             0,
             wss_utils.get_notification_code('order new'),
