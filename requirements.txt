@@ -15,3 +15,7 @@ pyopenssl
 service_identity
 pytest
 requests_mock
+Sphinx
+nbsphinx
+sphinx_rtd_theme
+sphinxcontrib-napoleon

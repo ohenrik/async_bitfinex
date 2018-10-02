@@ -525,28 +525,35 @@ class WssClient(BitfinexSocketManager):
 
     def calc(self, *calculations):
         """This message will be used by clients to trigger specific calculations,
-                so we don't end up in calculating data that is not usually needed.
-           You can request calculations to the websocket server that sends you the same message,
-                with the required fields.
-           Possible prefixes:
+        so we don't end up in calculating data that is not usually needed.
+
+       You can request calculations to the websocket server that sends you the
+       same message, with the required fields.
+
+        Parameters
+        ----------
+        *calculations : str
+            margin_sym_SYMBOL
+            funding_sym_SYMBOL
+            position_SYMBOL
+            wallet_WALLET-TYPE_CURRENCY
+
+       .. Note::
+                Possible prefixes:
+
                 margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
                 funding_sym_SYMBOL
                 position_SYMBOL
                 wallet_WALLET-TYPE_CURRENCY
-           NOTE
+
+       .. Note::
+
                 Calculations are on demand, so no more streaming of unnecessary data.
                 Websocket server allows up to 30 calculations per batch.
                 If the client sends too many concurrent requests (or tries to spam) requests,
                 it will receive an error and potentially a disconnection.
                 The Websocket server performs a maximum of 8 calculations per second per client.
 
-            Parameters
-            ----------
-            *calculations : str
-                margin_sym_SYMBOL
-                funding_sym_SYMBOL
-                position_SYMBOL
-                wallet_WALLET-TYPE_CURRENCY
         """
 
         data = [
