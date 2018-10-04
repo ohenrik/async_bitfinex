@@ -1,14 +1,13 @@
 # pylint: disable=W0621,C0111
-import os
-from decouple import config
 import json
+from decouple import config
 import pytest
 import requests_mock as rm
 from bitfinex.rest import ClientV1 as Client
 
 
-API_KEY = "test" #os.environ.get('API_KEY', config('API_KEY'))
-API_SECRET = "test" #os.environ.get('API_SECRET', config('API_SECRET'))
+API_KEY = "test"  # os.environ.get('API_KEY', config('API_KEY'))
+API_SECRET = "test"  # os.environ.get('API_SECRET', config('API_SECRET'))
 
 @pytest.fixture()
 def client():
@@ -70,6 +69,7 @@ def test_should_have_symbols(client, requests_mock):
         'https://api.bitfinex.com/v1/symbols'
     )
 
+
 def test_should_have_symbol_details(client, requests_mock):
     # mock out the request
     request_result = '''[{
@@ -124,7 +124,7 @@ def test_should_have_ticker(client, requests_mock):
 
 def test_should_have_today(client, requests_mock):
     # mock out the request
-    request_result = {"low":"550.09","high":"572.2398","volume":"7305.33119836"}
+    request_result = {"low": "550.09", "high": "572.2398", "volume": "7305.33119836"}
     requests_mock.register_uri(
         rm.ANY,
         rm.ANY,
@@ -139,9 +139,9 @@ def test_should_have_today(client, requests_mock):
 
 def test_should_have_stats(client, requests_mock):
     request_result = [
-        {"period":1, "volume":"7410.27250155"},
-        {"period":7, "volume":"52251.37118006"},
-        {"period":30, "volume":"464505.07753251"}
+        {"period": 1, "volume": "7410.27250155"},
+        {"period": 7, "volume": "52251.37118006"},
+        {"period": 30, "volume": "464505.07753251"}
     ]
     requests_mock.register_uri(
         rm.ANY,
@@ -153,19 +153,20 @@ def test_should_have_stats(client, requests_mock):
         'https://api.bitfinex.com/v1/stats/btcusd'
     )
 
+
 def test_should_have_lendbook(client, requests_mock):
     request_result = {
-        "bids":[
-            {"rate":"5.475", "amount":"15.03894663", "period":30,
-             "timestamp":"1395112149.0", "frr": False},
-            {"rate":"2.409", "amount":"14.5121868", "period":7,
-             "timestamp":"1395497599.0", "frr":False}
+        "bids": [
+            {"rate": "5.475", "amount": "15.03894663", "period": 30,
+             "timestamp": "1395112149.0", "frr": False},
+            {"rate": "2.409", "amount": "14.5121868", "period": 7,
+             "timestamp": "1395497599.0", "frr": False}
         ],
-        "asks":[
-            {"rate":"6.351", "amount":"15.5180735", "period":5,
-             "timestamp":"1395549996.0", "frr":False},
-            {"rate":"6.3588", "amount":"626.94808249", "period":30,
-             "timestamp":"1395400654.0", "frr": False}
+        "asks": [
+            {"rate": "6.351", "amount": "15.5180735", "period": 5,
+             "timestamp": "1395549996.0", "frr": False},
+            {"rate": "6.3588", "amount": "626.94808249", "period": 30,
+             "timestamp": "1395400654.0", "frr": False}
         ]
     }
     requests_mock.register_uri(
@@ -204,6 +205,7 @@ def test_should_have_lendbook_with_parameters(client, requests_mock):
         'https://api.bitfinex.com/v1/lendbook/btc?limit_asks=0&limit_bids=2'
     )
 
+
 def test_should_have_order_book(client, requests_mock):
     request_result = {
         "bids": [
@@ -222,6 +224,7 @@ def test_should_have_order_book(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v1/book/btcusd'
     )
+
 
 def test_should_have_order_book_with_parameters(client, requests_mock):
     parameters = {'limit_asks': 0}
@@ -258,6 +261,7 @@ def test_get_active_orders_returns_json(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v1/orders'
     )
+
 
 def test_get_active_positions_returns_json(client, requests_mock):
     request_result = [{

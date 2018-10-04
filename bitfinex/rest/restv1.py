@@ -2,13 +2,13 @@
 #-*- coding: utf-8 -*-
 
 from __future__ import absolute_import
-import requests
 import json
 from json.decoder import JSONDecodeError
 import base64
 import hmac
 import hashlib
 import time
+import requests
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"
@@ -37,11 +37,11 @@ class Client:
     """
 
     def __init__(self, key=None, secret=None, nonce_multiplier=1.0):
-        assert type(nonce_multiplier) == float, "nonce_multiplier must be decimal"
-        self.URL = "%s://%s/%s" % (PROTOCOL, HOST, VERSION)
-        self.BASE_URL = "%s://%s/" % (PROTOCOL, HOST)
-        self.KEY = key
-        self.SECRET = secret
+        assert isinstance(nonce_multiplier, float), "nonce_multiplier must be decimal"
+        self.url = "%s://%s/%s" % (PROTOCOL, HOST, VERSION)
+        self.base_url = "%s://%s/" % (PROTOCOL, HOST)
+        self.key = key
+        self.secret = secret
         self.nonce_multiplier = nonce_multiplier
 
     def server(self):
@@ -75,10 +75,10 @@ class Client:
         j = json.dumps(payload)
         data = base64.standard_b64encode(j.encode('utf8'))
 
-        h = hmac.new(self.SECRET.encode('utf8'), data, hashlib.sha384)
-        signature = h.hexdigest()
+        hmc = hmac.new(self.secret.encode('utf8'), data, hashlib.sha384)
+        signature = hmc.hexdigest()
         return {
-            "X-BFX-APIKEY": self.KEY,
+            "X-BFX-APIKEY": self.key,
             "X-BFX-SIGNATURE": signature,
             "X-BFX-PAYLOAD": data
         }
@@ -94,10 +94,10 @@ class Client:
                 content = response.text()
             raise BitfinexException(response.status_code, response.reason, content)
 
-    def _post(self, endoint, payload, verify=False):
+    def _post(self, endoint, payload, verify=True):
         url = self.url_for(path=endoint)
         signed_payload = self._sign_payload(payload)
-        response = requests.post(url, headers=signed_payload, verify=True)
+        response = requests.post(url, headers=signed_payload, verify=verify)
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 400:
@@ -150,11 +150,9 @@ class Client:
         """
 
         payload = {
-
-           "request" : "/v1/order/new/multi",
-           "nonce"   : self._nonce(),
-           "orders"  : orders
-
+           "request": "/v1/order/new/multi",
+           "nonce": self._nonce(),
+           "orders": orders
         }
         response = self._post("/order/new/multi", payload=payload, verify=True)
         return response
@@ -253,7 +251,6 @@ class Client:
         response = self._post("position/close", payload=payload, verify=True)
         return response
 
-
     def past_trades(self, timestamp='0.0', symbol='btcusd'):
         """
         Fetch past trades
@@ -323,7 +320,6 @@ class Client:
         response = self._post("/offer/status", payload=payload, verify=True)
         return response
 
-
     def offers_history(self):
         """
 
@@ -370,8 +366,8 @@ class Client:
         :param since: Optional. Return only the history after this timestamp.
         :param until: Optional. Return only the history before this timestamp.
         :param limit: Optional. Limit the number of entries to return. Default is 500.
-        :param wallet: Optional. Return only entries that took place in this wallet. Accepted inputs are: “trading”,
-        “exchange”, “deposit”.
+        :param wallet: Optional. Return only entries that took place in this wallet.
+                       Accepted inputs are: “trading”, “exchange”, “deposit”.
         """
         payload = {
             "request": "/v1/history",
@@ -385,7 +381,6 @@ class Client:
         response = self._post("/history", payload=payload, verify=True)
         return response
 
-
     def movements(self, currency, start=0, end=9999999999, limit=10000, method='bitcoin'):
         """
         View you balance ledger entries
@@ -393,8 +388,8 @@ class Client:
         :param since: Optional. Return only the history after this timestamp.
         :param until: Optional. Return only the history before this timestamp.
         :param limit: Optional. Limit the number of entries to return. Default is 500.
-        :param method: Optional. Return only entries that used this method. Accepted inputs are: "bitcoin",
-        "litecoin", "wire".
+        :param method: Optional. Return only entries that used this method.
+                       Accepted inputs are: "bitcoin", "litecoin", "wire".
         """
         payload = {
             "request": "/v1/history/movements",
@@ -417,7 +412,6 @@ class Client:
         """
         return self._get(self.url_for(PATH_SYMBOLS))
 
-
     def symbols_details(self):
         """
         GET /symbols_details
@@ -435,7 +429,6 @@ class Client:
         """
         return self._get(self.url_for("symbols_details"))
 
-
     def ticker(self, symbol):
         """
         GET /ticker/:symbol
@@ -450,7 +443,6 @@ class Client:
             'mid': u'562.62495'}
         """
         return self._get(self.url_for(PATH_TICKER, (symbol)))
-
 
     def today(self, symbol):
         """
@@ -489,13 +481,11 @@ class Client:
     def lendbook(self, currency, parameters=None):
         """
         curl "https://api.bitfinex.com/v1/lendbook/btc"
-
-        {"bids":[{"rate":"5.475","amount":"15.03894663","period":30,"timestamp":"1395112149.0","frr":"No"},{"rate":"2.409","amount":"14.5121868","period":7,"timestamp":"1395497599.0","frr":"No"}],"asks":[{"rate":"6.351","amount":"15.5180735","period":5,"timestamp":"1395549996.0","frr":"No"},{"rate":"6.3588","amount":"626.94808249","period":30,"timestamp":"1395400654.0","frr":"Yes"}]}
-
         Optional parameters
-
-        limit_bids (int): Optional. Limit the number of bids (loan demands) returned. May be 0 in which case the array of bids is empty. Default is 50.
-        limit_asks (int): Optional. Limit the number of asks (loan offers) returned. May be 0 in which case the array of asks is empty. Default is 50.
+        limit_bids (int): Optional. Limit the number of bids (loan demands) returned.
+                          May be 0 in which case the array of bids is empty. Default is 50.
+        limit_asks (int): Optional. Limit the number of asks (loan offers) returned.
+                          May be 0 in which case the array of asks is empty. Default is 50.
         """
         data = self._get(self.url_for(PATH_LENDBOOK, path_arg=currency, parameters=parameters))
 
@@ -520,14 +510,13 @@ class Client:
         """
         curl "https://api.bitfinex.com/v1/book/btcusd"
 
-        {"bids":[{"price":"561.1101","amount":"0.985","timestamp":"1395557729.0"}],"asks":[{"price":"562.9999","amount":"0.985","timestamp":"1395557711.0"}]}
-
         The 'bids' and 'asks' arrays will have multiple bid and ask dicts.
 
         Optional parameters
-
-        limit_bids (int): Optional. Limit the number of bids returned. May be 0 in which case the array of bids is empty. Default is 50.
-        limit_asks (int): Optional. Limit the number of asks returned. May be 0 in which case the array of asks is empty. Default is 50.
+        limit_bids (int): Optional. Limit the number of bids returned.
+                          May be 0 in which case the array of bids is empty. Default is 50.
+        limit_asks (int): Optional. Limit the number of asks returned.
+                          May be 0 in which case the array of asks is empty. Default is 50.
 
         eg.
         curl "https://api.bitfinex.com/v1/book/btcusd?limit_bids=1&limit_asks=0"
@@ -542,6 +531,7 @@ class Client:
                     list_[key] = value
 
         return data
+
 
 class TradeClient(Client):
     """Added for backward compatibility"""

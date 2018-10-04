@@ -1,9 +1,8 @@
 # coding=utf-8
-import os
 import threading
-from datetime import date
 import json
-import hmac, hashlib
+import hmac
+import hashlib
 
 from autobahn.twisted.websocket import WebSocketClientFactory, \
     WebSocketClientProtocol, \
@@ -15,6 +14,7 @@ from bitfinex.websockets import wss_utils
 
 # Example used to make send logic
 # https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
+
 
 class BitfinexClientProtocol(WebSocketClientProtocol):
 
@@ -40,6 +40,7 @@ class BitfinexClientProtocol(WebSocketClientProtocol):
                 pass
             else:
                 self.factory.callback(payload_obj)
+
 
 class BitfinexReconnectingClientFactory(ReconnectingClientFactory):
 
@@ -83,7 +84,7 @@ class BitfinexSocketManager(threading.Thread):
 
     STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
-    def __init__(self): #client
+    def __init__(self):  # client
         """Initialise the BitfinexSocketManager"""
         threading.Thread.__init__(self)
         self.factories = {}
@@ -103,10 +104,8 @@ class BitfinexSocketManager(threading.Thread):
         factory.protocol = BitfinexClientProtocol
         factory.callback = callback
         factory.reconnect = True
-        context_factory = ssl.ClientContextFactory()
         self.factories[id_] = factory
         reactor.callFromThread(self.add_connection, id_)
-
 
     def add_connection(self, id_):
         """
@@ -116,7 +115,6 @@ class BitfinexSocketManager(threading.Thread):
         factory = self.factories[id_]
         context_factory = ssl.ClientContextFactory()
         self._conns[id_] = connectWS(factory, context_factory)
-
 
     def stop_socket(self, conn_key):
         """Stop a websocket given the connection key
@@ -131,7 +129,6 @@ class BitfinexSocketManager(threading.Thread):
         self._conns[conn_key].factory = WebSocketClientFactory(self.STREAM_URL)
         self._conns[conn_key].disconnect()
         del(self._conns[conn_key])
-
 
     def run(self):
         try:
@@ -156,7 +153,7 @@ class WssClient(BitfinexSocketManager):
     # Bitfinex commands
     ###########################################################################
 
-    def __init__(self, key=None, secret=None): #client
+    def __init__(self, key=None, secret=None):  # client
         """Initialise the WssClient"""
         super().__init__()
         self.key = key
@@ -166,7 +163,7 @@ class WssClient(BitfinexSocketManager):
         nonce = int(wss_utils.UtcNow() * 1000000)
         auth_payload = 'AUTH{}'.format(nonce)
         signature = hmac.new(
-            self.secret.encode(), #settings.API_SECRET.encode()
+            self.secret.encode(),  # settings.API_SECRET.encode()
             msg=auth_payload.encode('utf8'),
             digestmod=hashlib.sha384
         ).hexdigest()
@@ -210,7 +207,7 @@ class WssClient(BitfinexSocketManager):
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
-    #Precision: R0, P0, P1, P2, P3
+    # Precision: R0, P0, P1, P2, P3
     def subscribe_to_orderbook(self, symbol, precision, callback):
         """Subscribe to the orderbook of a given pair.
 
@@ -233,7 +230,7 @@ class WssClient(BitfinexSocketManager):
             "prec": precision,
             'symbol': symbol,
         }
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
     # TODO: Switch "pair" to "symbol" in new major version
@@ -275,7 +272,7 @@ class WssClient(BitfinexSocketManager):
             'channel': 'candles',
             'key': key,
         }
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
     def ping(self, channel="auth"):
@@ -285,7 +282,7 @@ class WssClient(BitfinexSocketManager):
             'event': 'ping',
             'cid': client_cid
         }
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
         return client_cid
 
@@ -372,7 +369,7 @@ class WssClient(BitfinexSocketManager):
             The price to buy at. Will be ignored for market orders.
 
         price_trailing : decimal string
-        	The trailing price
+            The trailing price
 
         price_aux_limit : decimal string
             Auxiliary Limit price (for STOP LIMIT)
@@ -413,7 +410,7 @@ class WssClient(BitfinexSocketManager):
             None,
             operation
         ]
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
         return operation["cid"]
 
@@ -434,7 +431,7 @@ class WssClient(BitfinexSocketManager):
             None,
             operations
         ]
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
         return [order[1].get("cid", None) for order in operations]
 
@@ -455,7 +452,7 @@ class WssClient(BitfinexSocketManager):
                 'id': order_id
             }
         ]
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
 
     def cancel_order_cid(self, order_cid, order_date):
@@ -480,9 +477,8 @@ class WssClient(BitfinexSocketManager):
                 'cid_date': order_date
             }
         ]
-        payload = json.dumps(data, ensure_ascii = False).encode('utf8')
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-
 
     def update_order(self, **order_settings):
         """Update order using the order id
@@ -521,7 +517,6 @@ class WssClient(BitfinexSocketManager):
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-
 
     def calc(self, *calculations):
         """This message will be used by clients to trigger specific calculations,

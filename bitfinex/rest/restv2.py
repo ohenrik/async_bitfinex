@@ -1,5 +1,4 @@
 #!/usr/bin/python
-#-*- coding: utf-8 -*-
 """Bitfinex Rest API V2 implementation"""
 # pylint: disable=R0904
 
@@ -10,7 +9,6 @@ import hmac
 import hashlib
 import time
 import requests
-
 
 
 PROTOCOL = "https"
@@ -60,7 +58,7 @@ class Client:
         """
         create signed headers
         """
-        signature = "/api/" + path + nonce + body
+        signature = "/api/{}{}{}".format(path, nonce, body)
         hmc = hmac.new(self.secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = hmc.hexdigest()
 
@@ -88,8 +86,6 @@ class Client:
                 content = response.text()
             raise BitfinexException(response.status_code, response.reason, content)
 
-
-
     def _get(self, path, **params):
         """
         Send get request to bitfinex
@@ -105,9 +101,6 @@ class Client:
                 content = response.text()
             raise BitfinexException(response.status_code, response.reason, content)
 
-
-
-
     # REST PUBLIC ENDPOINTS
     def platform_status(self):
         """
@@ -121,8 +114,6 @@ class Client:
         path = "v2/platform/status"
         response = self._get(path)
         return response
-
-
 
     def tickers(self, symbol_list):
         """
@@ -144,11 +135,9 @@ class Client:
         volume and how much the price has moved over the last day.
         https://bitfinex.readme.io/v2/reference#rest-public-ticker
         """
-        path = "v2/ticker/"+str(symbol)
+        path = "v2/ticker/{}".format(symbol)
         response = self._get(path)
         return response
-
-
 
     def trades(self, symbol):
         """
@@ -156,10 +145,9 @@ class Client:
         size and time.
         https://bitfinex.readme.io/v2/reference#rest-public-trades
         """
-        path = "v2/trades/"+symbol+"/hist"
+        path = "v2/trades/{}/hist".format(symbol)
         response = self._get(path)
         return response
-
 
     def books(self, symbol, precision="P0"):
         """
@@ -174,7 +162,6 @@ class Client:
         path = f"v2/book/{symbol}/{precision}"
         response = self._get(path)
         return response
-
 
     def stats(self, **kwargs):
         """
@@ -191,8 +178,9 @@ class Client:
         """
         key_values = ['funding.size', 'credits.size', 'credits.size.sym', 'pos.size']
         if kwargs['key'] not in key_values:
-            raise ValueError("Key must have one of the following values : "+" ".join(key_values))
-
+            key_values = " ".join(key_values)
+            msg = "Key must have one of the following values : {}".format(key_values)
+            raise ValueError(msg)
 
         common_stats_url = "v2/stats1/{key}:{size}:{symbol}".format(
             key=kwargs['key'],
@@ -235,13 +223,11 @@ class Client:
         path = "v2/candles/trade"
         for arg in margs:
             path = path + ":" + arg
-        path += "/"+section
+        path += "/{}".format(section)
         response = self._get(path, **kwargs)
         return response
 
-
-
-    #REST CALCULATION ENDPOINTS
+    # REST CALCULATION ENDPOINTS
     def market_average_price(self, **kwargs):
         """
         Calculate the average execution rate for Trading or Margin funding.
@@ -253,7 +239,6 @@ class Client:
         response = self._post(path, raw_body, verify=True)
         return response
 
-
     def foreign_exchange_rate(self, **kwargs):
         """
         https://bitfinex.readme.io/v2/reference#foreign-exchange-rate
@@ -264,10 +249,7 @@ class Client:
         response = self._post(path, raw_body, verify=True)
         return response
 
-
-
-
-    #REST AUTHENTICATED ENDPOINTS
+    # REST AUTHENTICATED ENDPOINTS
     def wallets_balance(self):
         """
         Get account wallets
@@ -280,7 +262,6 @@ class Client:
         response = self._post(path, raw_body, verify=True)
         return response
 
-
     def active_orders(self, trade_pair=""):
         """
         Fetch active orders using rest api v2
@@ -289,10 +270,9 @@ class Client:
 
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/orders/"+trade_pair
+        path = "v2/auth/r/orders/{}".format(trade_pair)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def orders_history(self, trade_pair, **kwargs):
         """
@@ -302,7 +282,7 @@ class Client:
 
         body = kwargs
         raw_body = json.dumps(body)
-        path = "v2/auth/r/orders/"+trade_pair+"/hist"
+        path = "v2/auth/r/orders/{}/hist".format(trade_pair)
         response = self._post(path, raw_body, verify=True)
         return response
 
@@ -313,10 +293,9 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/order/"+trade_pair+":"+str(order_id)+"/trades"
+        path = "v2/auth/r/order/{}:{}/trades".format(trade_pair, order_id)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def trades_history(self, trade_pair, **kwargs):
         """
@@ -326,10 +305,9 @@ class Client:
 
         body = kwargs
         raw_body = json.dumps(body)
-        path = "v2/auth/r/trades/"+trade_pair+"/hist"
+        path = "v2/auth/r/trades/{}/hist".format(trade_pair)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def active_positions(self):
         """
@@ -342,7 +320,6 @@ class Client:
         response = self._post(path, raw_body, verify=True)
         return response
 
-
     def funding_offers(self, symbol=""):
         """
         Get active funding offers.
@@ -350,10 +327,9 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/funding/offers/"+symbol
+        path = "v2/auth/r/funding/offers/{}".format(symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_offers_history(self, symbol="", **kwargs):
         """
@@ -362,11 +338,10 @@ class Client:
         """
         body = kwargs
         raw_body = json.dumps(body)
-        addsymbol = "{}/".format(symbol) if symbol else ""
-        path = "v2/auth/r/funding/offers/"+addsymbol+"hist"
+        add_symbol = "{}/".format(symbol) if symbol else ""
+        path = "v2/auth/r/funding/offers/{}hist".format(add_symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_loans(self, symbol=""):
         """
@@ -375,10 +350,9 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/funding/loans/"+symbol
+        path = "v2/auth/r/funding/loans/{}".format(symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_loans_history(self, symbol="", **kwargs):
         """
@@ -387,11 +361,10 @@ class Client:
         """
         body = kwargs
         raw_body = json.dumps(body)
-        addsymbol = "{}/".format(symbol) if symbol else ""
-        path = "v2/auth/r/funding/loans/"+addsymbol+"hist"
+        add_symbol = "{}/".format(symbol) if symbol else ""
+        path = "v2/auth/r/funding/loans/{}hist".format(add_symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_credits(self, symbol=""):
         """
@@ -400,10 +373,9 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/funding/credits/"+symbol
+        path = "v2/auth/r/funding/credits/{}".format(symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_credits_history(self, symbol="", **kwargs):
         """
@@ -412,11 +384,10 @@ class Client:
         """
         body = kwargs
         raw_body = json.dumps(body)
-        addsymbol = "{}/".format(symbol) if symbol else ""
-        path = "v2/auth/r/funding/credits/"+addsymbol+"hist"
+        add_symbol = "{}/".format(symbol) if symbol else ""
+        path = "v2/auth/r/funding/credits/{}hist".format(add_symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_trades(self, symbol="", **kwargs):
         """
@@ -425,11 +396,10 @@ class Client:
         """
         body = kwargs
         raw_body = json.dumps(body)
-        addsymbol = "{}/".format(symbol) if symbol else ""
-        path = "v2/auth/r/funding/trades/"+addsymbol+"hist"
+        add_symbol = "{}/".format(symbol) if symbol else ""
+        path = "v2/auth/r/funding/trades/{}hist".format(add_symbol)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def margin_info(self, tradepair="base"):
         """
@@ -438,10 +408,9 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/info/margin/"+tradepair
+        path = "v2/auth/r/info/margin/{}".format(tradepair)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def funding_info(self, tradepair):
         """
@@ -450,10 +419,9 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/info/funding/"+tradepair
+        path = "v2/auth/r/info/funding/{}".format(tradepair)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def movements(self, currency=""):
         """
@@ -462,11 +430,10 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        addcurrency = "{}/".format(currency.upper()) if currency else ""
-        path = "v2/auth/r/movements/"+addcurrency+"hist"
+        add_currency = "{}/".format(currency.upper()) if currency else ""
+        path = "v2/auth/r/movements/{}hist".format(add_currency)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def performance(self, period="1D"):
         """
@@ -481,22 +448,20 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        path = "v2/auth/r/stats/perf:"+period+"/hist"
+        path = "v2/auth/r/stats/perf:{}/hist".format(period)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def alert_list(self):
         """
         List of active alerts
         https://api.bitfinex.com/v:version/auth/r/alerts
         """
-        body = {'type':'price'}
+        body = {'type': 'price'}
         raw_body = json.dumps(body)
         path = "v2/auth/r/alerts"
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def alert_set(self, alert_type, symbol, price):
         """
@@ -504,16 +469,15 @@ class Client:
         https://bitfinex.readme.io/v2/reference#rest-auth-alert-set
         """
         body = {
-            'type'   : alert_type,
-            'symbol' : symbol,
-            'price'  : price
+            'type': alert_type,
+            'symbol': symbol,
+            'price': price
         }
 
         raw_body = json.dumps(body)
         path = "v2/auth/w/alert/set"
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def alert_delete(self, symbol, price):
         """
@@ -523,10 +487,9 @@ class Client:
         body = {}
 
         raw_body = json.dumps(body)
-        path = "v2/auth/w/alert/price:"+symbol+":"+str(price)+"/del"
+        path = "v2/auth/w/alert/price:{}:{}/del".format(symbol, price)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def calc_available_balance(self, symbol, direction, rate, order_type):
         """
@@ -542,17 +505,16 @@ class Client:
         """
 
         body = {
-            'symbol' : symbol,
-            'dir'    : direction,
-            'rate'   : rate,
-            'type'   : order_type
+            'symbol': symbol,
+            'dir': direction,
+            'rate': rate,
+            'type': order_type
         }
 
         raw_body = json.dumps(body)
         path = "v2/auth/calc/order/avail"
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def ledgers(self, currency=""):
         """
@@ -561,23 +523,23 @@ class Client:
         """
         body = {}
         raw_body = json.dumps(body)
-        addcurrency = "{}/".format(currency.upper()) if currency else ""
-        path = "v2/auth/r/ledgers/"+addcurrency+"hist"
+        add_currency = "{}/".format(currency.upper()) if currency else ""
+        path = "v2/auth/r/ledgers/{}hist".format(add_currency)
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def user_settings_read(self, pkey):
         """
         Read user settings
         https://bitfinex.readme.io/v2/reference#user-settings-read
         """
-        body = {'keys':['api:'+str(pkey)]}
+        body = {
+            'keys': ['api:{}'.format(pkey)]
+        }
         raw_body = json.dumps(body)
         path = "v2/auth/r/settings"
         response = self._post(path, raw_body, verify=True)
         return response
-
 
     def user_settings_write(self, pkey):
         """
@@ -585,7 +547,6 @@ class Client:
         https://bitfinex.readme.io/v2/reference#user-settings-write
         """
         raise NotImplementedError
-
 
     def user_settings_delete(self, pkey):
         """

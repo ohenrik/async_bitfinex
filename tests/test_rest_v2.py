@@ -33,6 +33,7 @@ def test_tickers_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/tickers?symbols=tIOTBTC,tIOTUSD'
     )
 
+
 def test_tickers_response(client, requests_mock):
     response_text = json.dumps([
         ['tIOTBTC',
@@ -78,6 +79,7 @@ def test_ticker_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/ticker/tIOTBTC'
     )
 
+
 def test_ticker_response(client, requests_mock):
     response_text = json.dumps([
         0.00011989,
@@ -100,8 +102,6 @@ def test_ticker_response(client, requests_mock):
     assert isinstance(ticker_response, (list,))
 
 
-
-
 def test_trades_url_is_ok(client, requests_mock):
     response_text = "[]"
     requests_mock.register_uri(
@@ -113,6 +113,7 @@ def test_trades_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/trades/tIOTUSD/hist'
     )
+
 
 def test_trades_response(client, requests_mock):
     response_text = json.dumps([
@@ -128,6 +129,7 @@ def test_trades_response(client, requests_mock):
     assert isinstance(trades_response, list)
     assert trades_response[0][0] == 272147102
 
+
 def test_books_url_is_ok(client, requests_mock):
     requests_mock.register_uri(
         rmock.ANY,
@@ -138,6 +140,7 @@ def test_books_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/book/tIOTUSD/P1'
     )
+
 
 def test_books_response(client, requests_mock):
     response_text = json.dumps([
@@ -153,6 +156,7 @@ def test_books_response(client, requests_mock):
     books_response = client.books('tIOTUSD', 'P1')
     assert isinstance(books_response, list)
     assert books_response[0][0] == 0.97692
+
 
 def test_stats_url_is_ok(client, requests_mock):
     response_text = "[]"
@@ -172,6 +176,7 @@ def test_stats_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/stats1/funding.size:1m:fUSD/hist?sort=0'
     )
+
 
 def test_stats_response(client, requests_mock):
     response_text = json.dumps([
@@ -196,6 +201,7 @@ def test_stats_response(client, requests_mock):
     assert stats_response[0][0] == 1532430780000
     assert stats_response[0][1] == 548711270.8708785
 
+
 def test_candles_url_is_ok(client, requests_mock):
     response_text = json.dumps([
         [1532431320000, 8140.8, 8138.1, 8144, 8138, 15.50046363],
@@ -210,6 +216,7 @@ def test_candles_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/candles/trade:1m:tBTCUSD/hist?limit=1'
     )
+
 
 def test_candles_response(client, requests_mock):
     response_text = json.dumps([
@@ -238,6 +245,7 @@ def test_market_avg_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/calc/trade/avg'
     )
+
 
 def test_market_avg_response(client, requests_mock):
     response_text = json.dumps([7912.26508244, 100])
@@ -290,6 +298,7 @@ def test_wallets_balance_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/wallets'
     )
 
+
 def test_wallets_balance_response(client, requests_mock):
     response_text = json.dumps([
         ['funding', 'IOT', 6380, 0, None],
@@ -323,6 +332,7 @@ def test_active_orders_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/orders/tIOTUSD'
     )
+
 
 def test_active_orders_response(client, requests_mock):
     response_text = json.dumps([
@@ -380,6 +390,7 @@ def test_orders_history_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/orders/tIOTUSD/hist'
     )
+
 
 def test_orders_history_response(client, requests_mock):
     response_text = json.dumps([
@@ -439,6 +450,7 @@ def test_order_trades_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/order/tIOTUSD:14395751815/trades'
     )
 
+
 def test_order_trades_response(client, requests_mock):
     response_text = json.dumps([
         [269943238,
@@ -474,6 +486,7 @@ def test_trades_history_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/trades/tIOTUSD/hist'
     )
+
 
 def test_trades_history_response(client, requests_mock):
     response_text = json.dumps([
@@ -523,6 +536,7 @@ def test_active_positions_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/positions'
     )
 
+
 def test_active_positions_response(client, requests_mock):
     response_text = json.dumps([
         ['tIOTUSD',
@@ -559,6 +573,7 @@ def test_funding_offers_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/funding/offers/fIOT'
     )
 
+
 def test_funding_offers_response(client, requests_mock):
     response_text = json.dumps([
         [277750009,
@@ -594,8 +609,6 @@ def test_funding_offers_response(client, requests_mock):
     assert fo_response[0][10] == 'ACTIVE'
 
 
-
-
 def test_funding_offer_history_url(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -608,6 +621,7 @@ def test_funding_offer_history_url(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/funding/offers/fOMG/hist'
     )
 
+
 def test_funding_offers_hist_resp(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -617,8 +631,6 @@ def test_funding_offers_hist_resp(client, requests_mock):
     )
     foh_response = client.funding_offers_history('fOMG')
     assert isinstance(foh_response, list)
-
-
 
 
 def test_funding_loans_url_is_ok(client, requests_mock):
@@ -632,6 +644,7 @@ def test_funding_loans_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/funding/loans/fIOT'
     )
+
 
 def test_funding_loans_response(client, requests_mock):
     response_text = json.dumps([
@@ -668,7 +681,6 @@ def test_funding_loans_response(client, requests_mock):
     assert fl_response[0][7] == 'ACTIVE'
 
 
-
 def test_funding_loans_history_url(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -681,6 +693,7 @@ def test_funding_loans_history_url(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/funding/loans/fOMG/hist'
     )
 
+
 def test_funding_loans_history_resp(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -690,7 +703,6 @@ def test_funding_loans_history_resp(client, requests_mock):
     )
     flh_response = client.funding_loans_history('fOMG')
     assert isinstance(flh_response, list)
-
 
 
 def test_funding_credits_url_is_ok(client, requests_mock):
@@ -704,6 +716,7 @@ def test_funding_credits_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/funding/credits/fIOT'
     )
+
 
 def test_funding_credits_response(client, requests_mock):
     response_text = json.dumps([
@@ -752,6 +765,7 @@ def test_funding_credits_history_url(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/funding/credits/fUSD/hist'
     )
 
+
 def test_funding_credits_history_resp(client, requests_mock):
     response_text = json.dumps([
         [104187074,
@@ -799,6 +813,7 @@ def test_funding_trades_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/funding/trades/fUSD/hist'
     )
 
+
 def test_funding_trades_response(client, requests_mock):
     response_text = json.dumps([
         [71126559, 'fUSD', 1532690564000, 0, -489.93446, 0.00013558, 2, None],
@@ -820,6 +835,7 @@ def test_funding_trades_response(client, requests_mock):
     assert isinstance(ft_response, list)
     assert ft_response[0][1] == 'fUSD'
 
+
 def test_margin_info_url_is_ok(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -831,6 +847,7 @@ def test_margin_info_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/info/margin/tIOTUSD'
     )
+
 
 def test_margin_info_response(client, requests_mock):
     response_text = json.dumps([
@@ -861,6 +878,7 @@ def test_funding_info_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/info/funding/fUSD'
     )
 
+
 def test_funding_info_response(client, requests_mock):
     response_text = json.dumps([
         'sym',
@@ -879,7 +897,6 @@ def test_funding_info_response(client, requests_mock):
     assert isinstance(fi_response[2], list)
 
 
-
 def test_movements_url_is_ok(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -891,6 +908,7 @@ def test_movements_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/movements/IOT/hist'
     )
+
 
 def test_movements_response(client, requests_mock):
     response_text = json.dumps([
@@ -953,6 +971,7 @@ def test_alert_list_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/r/alerts'
     )
 
+
 def test_alert_list_response(client, requests_mock):
     response_text = json.dumps([
         ['price:tEOSUSD:14.524', 'price', 'tEOSUSD', 14.524, 93],
@@ -986,6 +1005,7 @@ def test_alert_set_url_is_ok(client, requests_mock):
         'https://api.bitfinex.com/v2/auth/w/alert/set'
     )
 
+
 def test_alert_set_response(client, requests_mock):
     response_text = json.dumps([
         'price:tIOTUSD:3',
@@ -1005,7 +1025,6 @@ def test_alert_set_response(client, requests_mock):
     assert as_response[3] == 3
 
 
-
 def test_alert_delete_url_is_ok(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -1017,6 +1036,7 @@ def test_alert_delete_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/w/alert/price:tIOTUSD:3/del'
     )
+
 
 def test_alert_delete_response(client, requests_mock):
     response_text = json.dumps([True])
@@ -1030,7 +1050,6 @@ def test_alert_delete_response(client, requests_mock):
     assert ad_response[0]
 
 
-
 def test_calc_available_balance_url_is_ok(client, requests_mock):
     response_text = json.dumps([])
     requests_mock.register_uri(
@@ -1042,6 +1061,7 @@ def test_calc_available_balance_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/calc/order/avail'
     )
+
 
 def test_calc_available_balance_response(client, requests_mock):
     response_text = json.dumps([0.79734514])
@@ -1066,6 +1086,7 @@ def test_ledgers_url_is_ok(client, requests_mock):
     assert requests_mock.request_history[0].url == (
         'https://api.bitfinex.com/v2/auth/r/ledgers/IOT/hist'
     )
+
 
 def test_ledger_response(client, requests_mock):
     response_text = json.dumps([

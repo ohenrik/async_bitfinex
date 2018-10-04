@@ -17,7 +17,8 @@ class CSVDataSource:
 
     def parse_timestamp_column(self, label, unit, set_index=True):
         """
-        Convert (if necessary) a given column into a pandas timestamp type to allow handling of time series
+        Convert (if necessary) a given column into a pandas timestamp type
+        to allow handling of time series
         :param label: column to check
         :param unit: if column is already a timestamp, i.e. an integer, whats the time unit.
         :return:
