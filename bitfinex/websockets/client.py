@@ -519,36 +519,34 @@ class WssClient(BitfinexSocketManager):
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
 
     def calc(self, *calculations):
-        """This message will be used by clients to trigger specific calculations,
+        """
+        This message will be used by clients to trigger specific calculations,
         so we don't end up in calculating data that is not usually needed.
 
-       You can request calculations to the websocket server that sends you the
-       same message, with the required fields.
+        You can request calculations to the websocket server that sends you the
+        same message, with the required fields.
 
         Parameters
         ----------
-        *calculations : str
-            margin_sym_SYMBOL
-            funding_sym_SYMBOL
-            position_SYMBOL
-            wallet_WALLET-TYPE_CURRENCY
+        *calculations : list
+            list of calculations wanted
 
-       .. Note::
-                Possible prefixes:
 
-                margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
-                funding_sym_SYMBOL
-                position_SYMBOL
-                wallet_WALLET-TYPE_CURRENCY
+        Notes
+        -----
+             List items must be one of the following options
 
-       .. Note::
+                - margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
+                - funding_sym_SYMBOL
+                - position_SYMBOL
+                - wallet_WALLET-TYPE_CURRENCY
 
-                Calculations are on demand, so no more streaming of unnecessary data.
-                Websocket server allows up to 30 calculations per batch.
-                If the client sends too many concurrent requests (or tries to spam) requests,
-                it will receive an error and potentially a disconnection.
-                The Websocket server performs a maximum of 8 calculations per second per client.
-
+        Examples
+        --------
+            - WssClient.calc([margin_sym_tBTCUSD,funding_sym_fUSD])
+            - WssClient.calc([margin_sym_tBTCUSD])
+            - WssClient.calc([position_tBTCUSD])
+            - WssClient.calc([wallet_exachange_USD])
         """
 
         data = [
