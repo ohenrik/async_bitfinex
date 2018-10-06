@@ -3,6 +3,7 @@
 tmp/*
 cover/*
 build
+_build/*
 __pycache__
 bitfinex.egg-info
 dist
