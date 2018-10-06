@@ -534,7 +534,13 @@ class WssClient(BitfinexSocketManager):
 
         Notes
         -----
-             List items must be one of the following options
+            Calculations are on demand, so no more streaming of unnecessary data.
+            Websocket server allows up to 30 calculations per batch.
+            If the client sends too many concurrent requests (or tries to spam) requests,
+            it will receive an error and potentially a disconnection.
+            The Websocket server performs a maximum of 8 calculations per second per client.
+
+            List items must be one of the following 
 
                 - margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
                 - funding_sym_SYMBOL
