@@ -12,6 +12,9 @@ Bitfinex (v2)
 
    websocket
 
+   restv2
+
+
 Indices and tables
 ==================
 
