@@ -28,11 +28,29 @@ class BitfinexException(Exception):
 
 
 class Client:
-    """
-    : Client for the bitfinex.com API REST V2.
-    : See these links for documentation :
-    :     https://bitfinex.readme.io/v2/docs
-    :     https://bitfinex.readme.io/v2/reference
+    """Client for the bitfinex.com API REST V2.
+    Link for official bitfinex documentation :
+
+    `Bitfinex rest2 docs <https://bitfinex.readme.io/v2/docs>`_
+
+    `Bitfinex rest2 reference <https://bitfinex.readme.io/v2/reference>`_
+
+    Parameters
+    ----------
+    key : str
+        Bitfinex api key
+
+    secret : str
+        Bitfinex api secret
+
+    nonce_multiplier : Optional float
+        Multiply nonce by this number
+
+    Examples
+    --------
+    bfx_client = Client(key,secret)
+
+    bfx_client = Client(key,secret,2.0)
     """
 
     def __init__(self, key=None, secret=None, nonce_multiplier=1.0):
@@ -104,23 +122,86 @@ class Client:
     # REST PUBLIC ENDPOINTS
     def platform_status(self):
         """
+        `Bitfinex platform_status reference
+        <https://bitfinex.readme.io/v2/reference#rest-public-platform-status>`_
+
         Get the current status of the platform. Maintenance periods last for just few minutes and
         might be necessary from time to time during upgrades of core components of our
         infrastructure. Even if rare it is important to have a way to notify users. For a real-time
         notification we suggest to use websockets and listen to events 20060/20061
-        https://bitfinex.readme.io/v2/reference#rest-public-platform-status
-        Response details : 	int	1=operative, 0=maintenance
+
+        Example
+        -------
+        bfx_client.platform_status()
+
+        Returns
+        -------
+        int
+            - 1 = operative
+            - 0 = maintenance
         """
         path = "v2/platform/status"
         response = self._get(path)
         return response
 
     def tickers(self, symbol_list):
-        """
+        """`Bitfinex tickers reference
+        <https://bitfinex.readme.io/v2/reference#rest-public-tickers>`_
+
         The ticker is a high level overview of the state of the market. It shows you the current
         best bid and ask, as well as the last trade price.It also includes information such as daily
         volume and how much the price has moved over the last day.
-        https://bitfinex.readme.io/v2/reference#rest-public-tickers
+
+        Examples
+        --------
+            - bfx_client.tickers(['tIOTUSD', 'fIOT'])
+            - bfx_client.tickers(['tBTCUSD'])
+        Parameters
+        ----------
+        symbol_list : list
+            List of bitfinex tradepairs
+
+        Returns
+        -------
+        list
+
+            The list contains the following information::
+
+                [
+                  // on trading pairs (ex. tBTCUSD)
+                  [
+                    SYMBOL,
+                    BID,
+                    BID_SIZE,
+                    ASK,
+                    ASK_SIZE,
+                    DAILY_CHANGE,
+                    DAILY_CHANGE_PERC,
+                    LAST_PRICE,
+                    VOLUME,
+                    HIGH,
+                    LOW
+                  ],
+                  // on funding currencies (ex. fUSD)
+                  [
+                    SYMBOL,
+                    FRR,
+                    BID,
+                    BID_SIZE,
+                    BID_PERIOD,
+                    ASK,
+                    ASK_SIZE,
+                    ASK_PERIOD,
+                    DAILY_CHANGE,
+                    DAILY_CHANGE_PERC,
+                    LAST_PRICE,
+                    VOLUME,
+                    HIGH,
+                    LOW
+                  ],
+                  ...
+                ]
+
         """
         assert isinstance(symbol_list, list), "symbol_list must be of type list"
         assert symbol_list, "symbol_list must have at least one symbol"
@@ -154,8 +235,10 @@ class Client:
         The Order Books channel allow you to keep track of the state of the Bitfinex order book.
         It is provided on a price aggregated basis, with customizable precision.
         https://bitfinex.readme.io/v2/reference#rest-public-books
-        Params :
-            symbol :The symbol you want information about. You can find the list of valid symbols
+
+        Parameters
+        ----------
+            symbol : The symbol you want information about. You can find the list of valid symbols
                     by calling the /symbols endpoint.
             precision : Level of price aggregation (P0, P1, P2, P3, R0)
         """
@@ -167,7 +250,9 @@ class Client:
         """
         Various statistics about the requested pair.
         https://bitfinex.readme.io/v2/reference#rest-public-stats
-        Params :
+
+        Parameters
+        ----------
             Key     : Allowed values: "funding.size", "credits.size", "credits.size.sym", "pos.size"
             Size    : Available values: '1m'
             Symbol  : The symbol you want information about.
@@ -496,7 +581,9 @@ class Client:
         Calculate available balance for order/offer
         https://bitfinex.readme.io/v2/reference#rest-auth-calc-bal-avail
         example : calc_available_balance("tIOTUSD","1","1.13","EXCHANGE")
-        QUERY PARAMS :
+
+        Parameters
+        ----------
             symbol : symbol (string)
             dir    : direction of the order/offer
                      (orders: > 0 buy, < 0 sell | offers: > 0 sell, < 0 buy) (integer)

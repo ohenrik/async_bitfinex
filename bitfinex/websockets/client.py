@@ -540,7 +540,7 @@ class WssClient(BitfinexSocketManager):
             it will receive an error and potentially a disconnection.
             The Websocket server performs a maximum of 8 calculations per second per client.
 
-            List items must be one of the following 
+            List items must be one of the following
 
                 - margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
                 - funding_sym_SYMBOL
