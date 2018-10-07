@@ -118,9 +118,16 @@ class BitfinexSocketManager(threading.Thread):
 
     def stop_socket(self, conn_key):
         """Stop a websocket given the connection key
-        :param conn_key: Socket connection key
-        :type conn_key: string
-        :returns: connection key string if successful, False otherwise
+
+        Parameters
+        ----------
+        conn_key : str
+            Socket connection key
+
+        Returns
+        -------
+        str, bool
+            connection key string if successful, False otherwise
         """
         if conn_key not in self._conns:
             return
@@ -148,18 +155,67 @@ class BitfinexSocketManager(threading.Thread):
 
 
 class WssClient(BitfinexSocketManager):
+    """Websocket client for bitfinex.
+
+    Parameters
+    ----------
+    key : str
+        Your API key.
+
+    secret : str
+        Your API secret
+
+
+    .. Hint::
+
+        Do not store your key or secret directly in the code.
+        Use environment variables. and fetch them with
+        ``os.environ.get("BITFINEX_KEY")``
+
+    """
 
     ###########################################################################
     # Bitfinex commands
     ###########################################################################
 
     def __init__(self, key=None, secret=None):  # client
-        """Initialise the WssClient"""
         super().__init__()
         self.key = key
         self.secret = secret
 
     def authenticate(self, callback, filters=None):
+        """Method used to create an authenticated channel that both recieves
+        account spesific messages and is used to send account spesific messages.
+        So in order to be able to use the new_order method, you have to
+        create a authenticated channel before starting the connection.
+
+        Parameters
+        ----------
+        callback : func
+            A function to use to handle incomming messages. This channel wil
+            be handling all messages returned from operations like new_order or
+            cancel_order, so make sure you handle all these messages.
+
+        filters : List[str]
+            A list of filter strings. See more information here:
+            https://docs.bitfinex.com/v2/docs/ws-auth#section-channel-filters
+
+        Example
+        -------
+         ::
+
+            def handle_account_messages(message):
+                print(message)
+
+             # You should only need to create and authenticate a client once.
+             # Then simply reuse it later
+             my_client = WssClient(key, secret)
+             my_client.authenticate(
+                callback=handle_account_messages
+             )
+             my_client.start()
+
+        """
         nonce = int(wss_utils.UtcNow() * 1000000)
         auth_payload = 'AUTH{}'.format(nonce)
         signature = hmac.new(
@@ -183,6 +239,33 @@ class WssClient(BitfinexSocketManager):
 
     def subscribe_to_ticker(self, symbol, callback):
         """Subscribe to the passed symbol ticks data channel.
+
+        Parameters
+        ----------
+        pair : str
+            Symbol pair to request data for.
+
+        callback : func
+            A function to use to handle incomming messages
+
+        Example
+        -------
+         ::
+
+            def my_handler(message):
+                # Here you can do stuff with the messages
+                print(message)
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate(print)
+            my_client.subscribe_to_ticker(
+                symbol="BTCUSD",
+                precision="P1",
+                callback=my_handler
+            )
+            my_client.start()
         """
         symbol = 't' + symbol if not symbol.startswith('t') else symbol
         id_ = "_".join(["ticker", symbol])
@@ -196,6 +279,33 @@ class WssClient(BitfinexSocketManager):
 
     def subscribe_to_trades(self, symbol, callback):
         """Subscribe to the passed symbol trades data channel.
+
+        Parameters
+        ----------
+        symbol : str
+            Symbol pair to request data for.
+
+        callback : func
+            A function to use to handle incomming messages
+
+        Example
+        -------
+         ::
+
+            def my_handler(message):
+                # Here you can do stuff with the messages
+                print(message)
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate(print)
+            my_client.subscribe_to_trades(
+                symbol="BTCUSD",
+                precision="P1",
+                callback=my_handler
+            )
+            my_client.start()
         """
         symbol = 't' + symbol if not symbol.startswith('t') else symbol
         id_ = "_".join(["trades", symbol])
@@ -220,7 +330,26 @@ class WssClient(BitfinexSocketManager):
             Accepted values as strings {R0, P0, P1, P2, P3}
 
         callback : func
-            A function to use as callback
+            A function to use to handle incomming messages
+
+        Example
+        -------
+         ::
+
+            def my_handler(message):
+                # Here you can do stuff with the messages
+                print(message)
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+
+            my_client.subscribe_to_orderbook(
+                symbol="BTCUSD",
+                precision="P1",
+                callback=my_handler
+            )
+            my_client.start()
         """
         symbol = 't' + symbol if not symbol.startswith('t') else symbol
         id_ = "_".join(["order", symbol])
@@ -234,12 +363,12 @@ class WssClient(BitfinexSocketManager):
         return self._start_socket(id_, payload, callback)
 
     # TODO: Switch "pair" to "symbol" in new major version
-    def subscribe_to_candles(self, pair, timeframe, callback):
+    def subscribe_to_candles(self, symbol, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
 
         Parameters
         ----------
-        pair : str
+        symbol : str
             Symbol pair to request data for
 
         timeframe : str
@@ -247,12 +376,36 @@ class WssClient(BitfinexSocketManager):
             1D, 7D, 14D, 1M}
 
         callback : func
-            A function to use as callback
+            A function to use to handle incomming messages
 
         Returns
         -------
         str
             The socket identifier.
+
+        Example
+        -------
+         ::
+
+            def my_candle_handler(message):
+                # Here you can do stuff with the candle bar messages
+                print(message)
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+
+            my_client.subscribe_to_candles(
+                symbol="BTCUSD",
+                timeframe="1m",
+                callback=my_candle_handler
+            )
+            my_client.subscribe_to_candles(
+                symbol="ETHUSD",
+                timeframe="5m",
+                callback=my_candle_handler
+            )
+            my_client.start()
 
         """
 
@@ -276,7 +429,14 @@ class WssClient(BitfinexSocketManager):
         return self._start_socket(id_, payload, callback)
 
     def ping(self, channel="auth"):
-        """Ping bitfinex."""
+        """Ping bitfinex.
+
+        Parameters
+        ----------
+        channel : str
+            What channel id that should be pinged. Default "auth".
+            To get channel id’s use ´client._conns.keys()´.
+        """
         client_cid = wss_utils.UtcNow()
         data = {
             'event': 'ping',
@@ -320,6 +480,35 @@ class WssClient(BitfinexSocketManager):
         dict
             A dict containing the order detials. Used in new_order and for
             creating multiorders.
+
+        Example
+        -------
+        Note if you only want to create a new order, use the ´´new_order´´
+        method bellow. However if you want to submitt multiple order and
+        cancel orders at the same time use this method to create order
+        operations and send them with the ``multi_order`` method::
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate()
+            my_client.start()
+
+            order_operation = my_client.new_order_op(
+                order_type="LIMIT",
+                pair="BTCUSD",
+                amount=0.004,
+                price=1000.0
+            )
+
+            # Usefull to keep track of an order by its client id, for later
+            # operations (like cancel order).
+            clinet_id = order_operation["cid"]
+
+            my_client.multi_order(
+                operations=[order_operation]
+            )
+
         """
         flags = flags or []
         client_order_id = wss_utils.UtcNow()
@@ -391,6 +580,25 @@ class WssClient(BitfinexSocketManager):
         int
             Order client id (cid). The CID is also a mts date stamp of when the
             order was created.
+
+
+        Example
+        -------
+         ::
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate()
+            my_client.start()
+
+            order_client_id = my_client.new_order(
+                order_type="LIMIT",
+                pair="BTCUSD",
+                amount=0.004,
+                price=1000.0
+            )
+
         """
         operation = self.new_order_op(
             order_type=order_type,
@@ -422,8 +630,45 @@ class WssClient(BitfinexSocketManager):
         operations : list
             a list of operations. Read more here:
             https://bitfinex.readme.io/v2/reference#ws-input-order-multi-op
-            Hint. you can use the self.new_order_op() for easy order
+            Hint. you can use the self.new_order_op() for easy new order
             operation creation.
+
+        Returns
+        -------
+        list
+            A list of all the client ids created for each order. Returned in
+            the order they are given to the method.
+
+        Example
+        -------
+         ::
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate()
+            my_client.start()
+
+            example_order_cid_to_cancel = 1538911910035
+            # docs: http://bit.ly/2BVqwW6
+            cancel_order_operation = {
+                'cid': example_order_cid_to_cancel,
+                'cid_date': datetime.utcfromtimestamp(
+                    example_order_cid_to_cancel/1000.0
+                ).strftime("%Y-%m-%d")
+            }
+
+            new_order_operation = my_client.new_order_op(
+                order_type="LIMIT",
+                pair="BTCUSD",
+                amount=0.004,
+                price=1000.0
+            )
+
+            order_client_id = my_client.multi_order([
+                cancel_order_operation,
+                new_order_operation
+            ])
         """
         data = [
             0,
@@ -442,6 +687,21 @@ class WssClient(BitfinexSocketManager):
         ----------
         order_id : int, str
             Order id created by Bitfinex
+
+        Example
+        -------
+         ::
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate()
+            my_client.start()
+
+            my_client.cancel_order(
+                order_id=1234
+            )
+
         """
         data = [
             0,
@@ -466,6 +726,29 @@ class WssClient(BitfinexSocketManager):
 
         order_date : str
             Iso formated order date. e.g. "2012-01-23"
+
+
+        Example
+        -------
+         ::
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate()
+            my_client.start()
+
+            # order_cid created by this library is always a milliseconds
+            # time stamp. So you can just divide it by 1000 to get the timestamp.
+            my_client.cancel_order(
+                order_cid=1538911910035,
+                order_date=(
+                    datetime.utcfromtimestamp(
+                        1538911910035/1000.0
+                    ).strftime("%Y-%m-%d")
+                )
+            )
+
         """
         data = [
             0,
@@ -526,33 +809,48 @@ class WssClient(BitfinexSocketManager):
         You can request calculations to the websocket server that sends you the
         same message, with the required fields.
 
+        List items must be one of the following:
+
+            - margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
+            - funding_sym_SYMBOL
+            - position_SYMBOL
+            - wallet_WALLET-TYPE_CURRENCY
+
+
         Parameters
         ----------
         *calculations : list
             list of calculations wanted
 
+        Returns
+        -------
+        None
+            Data is returned over the auth channel. See the abbreviation
+            glossary: https://docs.bitfinex.com/v2/docs/abbreviations-glossary
 
-        Notes
-        -----
+        Examples
+        --------
+         ::
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate(print)
+            my_client.start()
+
+            my_client.calc([margin_sym_tBTCUSD,funding_sym_fUSD])
+            my_client.calc([margin_sym_tBTCUSD])
+            my_client.calc([position_tBTCUSD])
+            my_client.calc([wallet_exachange_USD])
+
+        .. Note::
+
             Calculations are on demand, so no more streaming of unnecessary data.
             Websocket server allows up to 30 calculations per batch.
             If the client sends too many concurrent requests (or tries to spam) requests,
             it will receive an error and potentially a disconnection.
             The Websocket server performs a maximum of 8 calculations per second per client.
 
-            List items must be one of the following
-
-                - margin_sym_SYMBOL (e.g. margin_sym_tBTCUSD)
-                - funding_sym_SYMBOL
-                - position_SYMBOL
-                - wallet_WALLET-TYPE_CURRENCY
-
-        Examples
-        --------
-            - WssClient.calc([margin_sym_tBTCUSD,funding_sym_fUSD])
-            - WssClient.calc([margin_sym_tBTCUSD])
-            - WssClient.calc([position_tBTCUSD])
-            - WssClient.calc([wallet_exachange_USD])
         """
 
         data = [
