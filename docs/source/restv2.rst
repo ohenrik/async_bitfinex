@@ -1,7 +1,7 @@
 .. _restv2:
 
 restv2 - Documentation for using the rest version 2 api
-===========================
+=======================================================
 
 
 

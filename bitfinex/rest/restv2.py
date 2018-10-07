@@ -48,9 +48,11 @@ class Client:
 
     Examples
     --------
-    bfx_client = Client(key,secret)
+     ::
 
-    bfx_client = Client(key,secret,2.0)
+        bfx_client = Client(key,secret)
+
+        bfx_client = Client(key,secret,2.0)
     """
 
     def __init__(self, key=None, secret=None, nonce_multiplier=1.0):
@@ -130,15 +132,19 @@ class Client:
         infrastructure. Even if rare it is important to have a way to notify users. For a real-time
         notification we suggest to use websockets and listen to events 20060/20061
 
-        Example
-        -------
-        bfx_client.platform_status()
 
         Returns
         -------
         int
             - 1 = operative
             - 0 = maintenance
+
+        Example
+        -------
+         ::
+
+            bfx_client.platform_status()
+
         """
         path = "v2/platform/status"
         response = self._get(path)
@@ -152,10 +158,6 @@ class Client:
         best bid and ask, as well as the last trade price.It also includes information such as daily
         volume and how much the price has moved over the last day.
 
-        Examples
-        --------
-            - bfx_client.tickers(['tIOTUSD', 'fIOT'])
-            - bfx_client.tickers(['tBTCUSD'])
         Parameters
         ----------
         symbol_list : list
@@ -164,7 +166,6 @@ class Client:
         Returns
         -------
         list
-
             The list contains the following information::
 
                 [
@@ -202,6 +203,14 @@ class Client:
                   ...
                 ]
 
+
+        Examples
+        --------
+         ::
+
+            bfx_client.tickers(['tIOTUSD', 'fIOT'])
+            bfx_client.tickers(['tBTCUSD'])
+
         """
         assert isinstance(symbol_list, list), "symbol_list must be of type list"
         assert symbol_list, "symbol_list must have at least one symbol"
@@ -238,9 +247,13 @@ class Client:
 
         Parameters
         ----------
-            symbol : The symbol you want information about. You can find the list of valid symbols
-                    by calling the /symbols endpoint.
-            precision : Level of price aggregation (P0, P1, P2, P3, R0)
+        symbol : str
+            The symbol you want information about. You can find the list of valid symbols
+            by calling the /symbols endpoint.
+
+        precision : str
+            Level of price aggregation (P0, P1, P2, P3, R0).
+            R0 means "gets the raw orderbook".
         """
         path = f"v2/book/{symbol}/{precision}"
         response = self._get(path)
@@ -253,13 +266,27 @@ class Client:
 
         Parameters
         ----------
-            Key     : Allowed values: "funding.size", "credits.size", "credits.size.sym", "pos.size"
-            Size    : Available values: '1m'
-            Symbol  : The symbol you want information about.
-            Symbol2 : The symbol you want information about.
-            Side    : Available values: "long", "short"
-            Section : Available values: "last", "hist"
-            sort    : 0 , 1
+        Key : str
+            Allowed values: "funding.size", "credits.size", "credits.size.sym",
+            "pos.size"
+
+        Size : str
+            Available values: '1m'
+
+        Symbol : str
+            The symbol you want information about.
+
+        Symbol2 : str
+            The symbol you want information about.
+
+        Side : str
+            Available values: "long", "short"
+
+        Section : str
+            Available values: "last", "hist"
+
+        sort : str
+            if = 1 it sorts results returned with old > new
         """
         key_values = ['funding.size', 'credits.size', 'credits.size.sym', 'pos.size']
         if kwargs['key'] not in key_values:
