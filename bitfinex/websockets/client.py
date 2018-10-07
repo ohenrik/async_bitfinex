@@ -262,7 +262,6 @@ class WssClient(BitfinexSocketManager):
             my_client.authenticate(print)
             my_client.subscribe_to_ticker(
                 symbol="BTCUSD",
-                precision="P1",
                 callback=my_handler
             )
             my_client.start()
@@ -302,7 +301,6 @@ class WssClient(BitfinexSocketManager):
             my_client.authenticate(print)
             my_client.subscribe_to_trades(
                 symbol="BTCUSD",
-                precision="P1",
                 callback=my_handler
             )
             my_client.start()
