@@ -46,7 +46,7 @@ Quickstart example
     )
 
 WssClient - With Examples
----------
+-------------------------
 
 .. autoclass:: bitfinex.websockets.client.WssClient
     :members:

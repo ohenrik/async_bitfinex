@@ -367,7 +367,7 @@ class Client:
         :param until: Optional. Return only the history before this timestamp.
         :param limit: Optional. Limit the number of entries to return. Default is 500.
         :param wallet: Optional. Return only entries that took place in this wallet.
-                       Accepted inputs are: “trading”, “exchange”, “deposit”.
+        Accepted inputs are: “trading”, “exchange”, “deposit”.
         """
         payload = {
             "request": "/v1/history",
@@ -389,7 +389,7 @@ class Client:
         :param until: Optional. Return only the history before this timestamp.
         :param limit: Optional. Limit the number of entries to return. Default is 500.
         :param method: Optional. Return only entries that used this method.
-                       Accepted inputs are: "bitcoin", "litecoin", "wire".
+        Accepted inputs are: "bitcoin", "litecoin", "wire".
         """
         payload = {
             "request": "/v1/history/movements",
@@ -405,6 +405,8 @@ class Client:
 
     def symbols(self):
         """
+        .. _symbols:
+
         GET /symbols
 
         curl https://api.bitfinex.com/v1/symbols
@@ -416,7 +418,7 @@ class Client:
         """
         GET /symbols_details
 
-        curl https://api.bitfinex.com/v1/symbols_details
+        curl https://api.bitfinex.com/v1/symbols_details ::
             [{
               "pair":"btcusd",
               "price_precision":5,
@@ -424,8 +426,8 @@ class Client:
               "minimum_margin":"15.0",
               "maximum_order_size":"2000.0",
               "minimum_order_size":"0.01",
-              "expiration":"NA"
-            }]
+              "expiration":"NA"}]
+
         """
         return self._get(self.url_for("symbols_details"))
 
@@ -433,9 +435,8 @@ class Client:
         """
         GET /ticker/:symbol
 
-        curl https://api.bitfinex.com/v1/pubticker/btcusd
-        {
-            'ask': '562.9999',
+        curl https://api.bitfinex.com/v1/pubticker/btcusd ::
+            {'ask': '562.9999',
             'timestamp': '1395552290.70933607',
             'bid': '562.25',
             'last_price': u'562.25',
@@ -453,15 +454,13 @@ class Client:
         """
         return self._get(self.url_for(PATH_TODAY, (symbol)))
 
-
     def stats(self, symbol):
         """
-        curl https://api.bitfinex.com/v1/stats/btcusd
-        [
-            {"period":1,"volume":"7410.27250155"},
+        curl https://api.bitfinex.com/v1/stats/btcusd ::
+            [{"period":1,"volume":"7410.27250155"},
             {"period":7,"volume":"52251.37118006"},
-            {"period":30,"volume":"464505.07753251"}
-        ]
+            {"period":30,"volume":"464505.07753251"}]
+
         """
         data = self._get(self.url_for(PATH_STATS, (symbol)))
 
@@ -477,15 +476,14 @@ class Client:
 
         return data
 
-
     def lendbook(self, currency, parameters=None):
         """
         curl "https://api.bitfinex.com/v1/lendbook/btc"
         Optional parameters
         limit_bids (int): Optional. Limit the number of bids (loan demands) returned.
-                          May be 0 in which case the array of bids is empty. Default is 50.
+        May be 0 in which case the array of bids is empty. Default is 50.
         limit_asks (int): Optional. Limit the number of asks (loan offers) returned.
-                          May be 0 in which case the array of asks is empty. Default is 50.
+        May be 0 in which case the array of asks is empty. Default is 50.
         """
         data = self._get(self.url_for(PATH_LENDBOOK, path_arg=currency, parameters=parameters))
 
@@ -505,7 +503,6 @@ class Client:
 
         return data
 
-
     def order_book(self, symbol, parameters=None):
         """
         curl "https://api.bitfinex.com/v1/book/btcusd"
@@ -514,9 +511,9 @@ class Client:
 
         Optional parameters
         limit_bids (int): Optional. Limit the number of bids returned.
-                          May be 0 in which case the array of bids is empty. Default is 50.
+        May be 0 in which case the array of bids is empty. Default is 50.
         limit_asks (int): Optional. Limit the number of asks returned.
-                          May be 0 in which case the array of asks is empty. Default is 50.
+        May be 0 in which case the array of asks is empty. Default is 50.
 
         eg.
         curl "https://api.bitfinex.com/v1/book/btcusd?limit_bids=1&limit_asks=0"

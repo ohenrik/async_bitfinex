@@ -11,7 +11,7 @@ Bitfinex (v2)
    :caption: Clients:
 
    websocket
-
+   restv1
    restv2
 
 
