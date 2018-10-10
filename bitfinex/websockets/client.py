@@ -135,7 +135,7 @@ class BitfinexSocketManager(threading.Thread):
         # disable reconnecting if we are closing
         self._conns[conn_key].factory = WebSocketClientFactory(self.STREAM_URL)
         self._conns[conn_key].disconnect()
-        del(self._conns[conn_key])
+        del self._conns[conn_key]
 
     def run(self):
         try:
@@ -361,12 +361,12 @@ class WssClient(BitfinexSocketManager):
         return self._start_socket(id_, payload, callback)
 
     # TODO: Switch "pair" to "symbol" in new major version
-    def subscribe_to_candles(self, symbol, timeframe, callback):
+    def subscribe_to_candles(self, pair, timeframe, callback):
         """Subscribe to the passed pair's OHLC data channel.
 
         Parameters
         ----------
-        symbol : str
+        pair : str
             Symbol pair to request data for
 
         timeframe : str
@@ -394,12 +394,12 @@ class WssClient(BitfinexSocketManager):
             my_client = WssClient(key, secret)
 
             my_client.subscribe_to_candles(
-                symbol="BTCUSD",
+                pair="BTCUSD",
                 timeframe="1m",
                 callback=my_candle_handler
             )
             my_client.subscribe_to_candles(
-                symbol="ETHUSD",
+                pair="ETHUSD",
                 timeframe="5m",
                 callback=my_candle_handler
             )
@@ -444,6 +444,7 @@ class WssClient(BitfinexSocketManager):
         self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
         return client_cid
 
+    # TODO: Change pair to symbol
     def new_order_op(self, order_type, pair, amount, price, price_trailing=None,
                      price_aux_limit=None, price_oco_stop=None, hidden=0,
                      flags=None, tif=None):

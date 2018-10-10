@@ -20,14 +20,14 @@ Quickstart example
     # Then simply reuse it later
     my_client = WssClient(key, secret)
     my_client.authenticate(print)
-    
+
     my_client.subscribe_to_candles(
-        symbol="BTCUSD",
+        pair="BTCUSD",
         timeframe="1m",
         callback=my_candle_handler
     )
     my_client.subscribe_to_candles(
-        symbol="ETHUSD",
+        pair="ETHUSD",
         timeframe="5m",
         callback=my_candle_handler
     )
