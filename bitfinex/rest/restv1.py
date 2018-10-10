@@ -33,7 +33,30 @@ class Client:
     """
     Client for the bitfinex.com API.
 
-    See https://www.bitfinex.com/pages/api for API documentation.
+    Link for official bitfinex documentation :
+
+    `Bitfinex rest1 docs <https://docs.bitfinex.com/v1/docs>`_
+
+    `Bitfinex rest1 reference <https://docs.bitfinex.com/v1/reference>`_
+
+    Parameters
+    ----------
+    key : str
+        Bitfinex api key
+
+    secret : str
+        Bitfinex api secret
+
+    nonce_multiplier : Optional float
+        Multiply nonce by this number
+
+    Examples
+    --------
+     ::
+
+        bfx_client = Client(key,secret)
+
+        bfx_client = Client(key,secret,2.0)
     """
 
     def __init__(self, key=None, secret=None, nonce_multiplier=1.0):
@@ -119,15 +142,68 @@ class Client:
 
     def place_order(self, amount, price, side, ord_type, symbol='btcusd', exchange='bitfinex'):
         """
-        Submit a new order.
-        :param amount:
-        :param price:
-        :param side:
-        :param ord_type:
-        :param symbol:
-        :param exchange:
-        :return:
+        .. _new_order:
+
+        `Bitfinex new order <https://docs.bitfinex.com/v1/reference#rest-auth-new-order>`_
+
+        Submit a new Order
+
+        Parameters
+        ----------
+        amount : float
+            Order size: how much you want to buy or sell
+
+        price : float
+            Price to buy or sell at. Must be positive. Use random number for market orders.
+
+        side : string
+            Either “buy” or “sell”.
+
+        ord_type : string
+            Either “market” / “limit” / “stop” / “trailing-stop” / “fill-or-kill” /
+            “exchange market” / “exchange limit” / “exchange stop” / “exchange trailing-stop” /
+            “exchange fill-or-kill”. (type starting by “exchange ” are exchange orders, others are
+            margin trading orders)
+
+        symbol : str
+            The `symbol <restv1.html#symbols>`_ you want information about.
+
+        exchange : str
+            'bitfinex'
+
+        Returns
+        -------
+        dict
+             ::
+
+                # response
+                {
+                  "id":448364249,
+                  "symbol":"btcusd",
+                  "exchange":"bitfinex",
+                  "price":"0.01",
+                  "avg_execution_price":"0.0",
+                  "side":"buy",
+                  "type":"exchange limit",
+                  "timestamp":"1444272165.252370982",
+                  "is_live":true,
+                  "is_cancelled":false,
+                  "is_hidden":false,
+                  "was_forced":false,
+                  "original_amount":"0.01",
+                  "remaining_amount":"0.01",
+                  "executed_amount":"0.0",
+                  "order_id":448364249
+                }
+
+        Examples
+        --------
+         ::
+
+            bfx_client.place_order(0.01, 0.01, "buy", "exchange limit", "btcusd")
+
         """
+
         payload = {
 
             "request": "/v1/order/new",
@@ -146,23 +222,131 @@ class Client:
 
     def place_multiple_orders(self, orders):
         """
-        Submit a new multiple order.
+        Parameters
+        ----------
+        orders : list
+            Each item in the list is a dict that must have the following items : symbol, amount,
+            price, side, type, exchange
+
+
+
+        Returns
+        -------
+        dict
+             ::
+
+                // response
+                {
+                  "order_ids":[
+                    {
+                        "id":448383727,
+                        "symbol":"btcusd",
+                        "exchange":"bitfinex",
+                        "price":"0.01",
+                        "avg_execution_price":"0.0",
+                        "side":"buy",
+                        "type":"exchange limit",
+                        "timestamp":"1444274013.621701916",
+                        "is_live":true,
+                        "is_cancelled":false,
+                        "is_hidden":false,
+                        "was_forced":false,
+                        "original_amount":"0.01",
+                        "remaining_amount":"0.01",
+                        "executed_amount":"0.0"
+                    },{
+                        "id":448383729,
+                        "symbol":"btcusd",
+                        "exchange":"bitfinex",
+                        "price":"0.03",
+                        "avg_execution_price":"0.0",
+                        "side":"buy",
+                        "type":"exchange limit",
+                        "timestamp":"1444274013.661297306",
+                        "is_live":true,
+                        "is_cancelled":false,
+                        "is_hidden":false,
+                        "was_forced":false,
+                        "original_amount":"0.02",
+                        "remaining_amount":"0.02",
+                        "executed_amount":"0.0"
+                    }],
+                  "status":"success"
+                }
+
+        Examples
+        --------
+         ::
+
+            # Make a list with 3 orders to buy 100 iota at 3 dollars,100 iota at 4 dollars and
+            # 100 iota at 5 dollars
+            # The list is sent to the method place_multiple_orders
+            orders = []
+            for price in range(3, 6):
+                print(price)
+                payload = {
+                    "symbol": 'IOTUSD',
+                    "amount": '100',
+                    "price": str(price),
+                    "exchange": 'bitfinex',
+                    "side": 'buy',
+                    "type": 'limit'
+                }
+                orders.append(payload)
+            response = bfx_client.place_multiple_orders(orders)
+            print(response)
         """
 
         payload = {
-           "request": "/v1/order/new/multi",
-           "nonce": self._nonce(),
-           "orders": orders
+            "request": "/v1/order/new/multi",
+            "nonce": self._nonce(),
+            "orders": orders
         }
         response = self._post("/order/new/multi", payload=payload, verify=True)
         return response
 
     def delete_order(self, order_id):
-        """
+        """`Bitfinex cancel order reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-cancel-order>`_
+
         Cancel an order.
-        :param order_id:
-        :return:
+
+        Parameters
+        ----------
+        order_id : int
+            The order ID given by `new_order`_ function
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "id":446915287,
+                  "symbol":"btcusd",
+                  "exchange":null,
+                  "price":"239.0",
+                  "avg_execution_price":"0.0",
+                  "side":"sell",
+                  "type":"trailing stop",
+                  "timestamp":"1444141982.0",
+                  "is_live":true,
+                  "is_cancelled":false,
+                  "is_hidden":false,
+                  "was_forced":false,
+                  "original_amount":"1.0",
+                  "remaining_amount":"1.0",
+                  "executed_amount":"0.0"
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.delete_order(448411153)
+
         """
+
         payload = {
             "request": "/v1/order/cancel",
             "nonce": self._nonce(),
@@ -173,10 +357,24 @@ class Client:
         return response
 
     def delete_all_orders(self):
-        """
-        Cancel all orders.
+        """`Bitfinex cancel all orders reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-cancel-multiple-orders>`_
 
-        :return:
+        Cancel all orders at once.
+
+        Returns
+        -------
+        dict
+             ::
+
+                {"result":"Orders cancelled"}
+
+        Example
+        -------
+         ::
+
+            bfx_client.delete_all_orders()
+
         """
         payload = {
             "request": "/v1/order/cancel/all",
@@ -187,11 +385,49 @@ class Client:
         return response
 
     def status_order(self, order_id):
+        """`Bitfinex status order reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-order-status>`_
+
+        Get the status of an order. Is it active? Was it cancelled?
+        To what extent has it been executed? etc.
+
+        Parameters
+        ----------
+        order_id : int
+            The order ID given by `new_order`_ function
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "id":448411153,
+                  "symbol":"btcusd",
+                  "exchange":null,
+                  "price":"0.01",
+                  "avg_execution_price":"0.0",
+                  "side":"buy",
+                  "type":"exchange limit",
+                  "timestamp":"1444276570.0",
+                  "is_live":false,
+                  "is_cancelled":true,
+                  "is_hidden":false,
+                  "oco_order":null,
+                  "was_forced":false,
+                  "original_amount":"0.01",
+                  "remaining_amount":"0.01",
+                  "executed_amount":"0.0"
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.status_order(448411153)
+
         """
-        Get the status of an order. Is it active? Was it cancelled? To what extent has it been executed? etc.
-        :param order_id:
-        :return:
-        """
+
         payload = {
             "request": "/v1/order/status",
             "nonce": self._nonce(),
@@ -202,8 +438,40 @@ class Client:
         return response
 
     def active_orders(self):
-        """
-        Fetch active orders
+        """`Bitfinex active orders reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-active-orders>`_
+
+        View your active orders.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "id":448411365,
+                  "symbol":"btcusd",
+                  "exchange":"bitfinex",
+                  "price":"0.02",
+                  "avg_execution_price":"0.0",
+                  "side":"buy",
+                  "type":"exchange limit",
+                  "timestamp":"1444276597.0",
+                  "is_live":true,
+                  "is_cancelled":false,
+                  "is_hidden":false,
+                  "was_forced":false,
+                  "original_amount":"0.02",
+                  "remaining_amount":"0.02",
+                  "executed_amount":"0.0"
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.active_orders(448411153)
+
         """
         payload = {
             "request": "/v1/orders",
@@ -213,8 +481,33 @@ class Client:
         return response
 
     def active_positions(self):
-        """
-        Fetch active Positions
+        """`Bitfinex active positions reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-active-positions>`_
+
+        View your active positions.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "id":943715,
+                  "symbol":"btcusd",
+                  "status":"ACTIVE",
+                  "base":"246.94",
+                  "amount":"1.0",
+                  "timestamp":"1444141857.0",
+                  "swap":"0.0",
+                  "pl":"-2.22042"
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.active_positions(448411153)
+
         """
         payload = {
             "request": "/v1/positions",
@@ -224,10 +517,46 @@ class Client:
         return response
 
     def claim_position(self, position_id):
-        """
-        Claim a position.
-        :param position_id:
-        :return:
+        """`Bitfinex claim position reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-claim-position>`_
+
+        A position can be claimed if: It is a long position: The amount in the last unit of the
+        position pair that you have in your trading wallet AND/OR the realized profit of the
+        position is greater or equal to the purchase amount of the position
+        (base price * position amount) and the funds which need to be returned. For example, for a
+        long BTCUSD position, you can claim the position if the amount of USD you have in the
+        trading wallet is greater than the base price * the position amount and the funds used.
+        It is a short position: The amount in the first unit of the position pair that you have in
+        your trading wallet is greater or equal to the amount of the position and the margin
+        funding used.
+
+        Parameters
+        ----------
+        position_id : int
+            The position ID
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "id":943715,
+                  "symbol":"btcusd",
+                  "status":"ACTIVE",
+                  "base":"246.94",
+                  "amount":"1.0",
+                  "timestamp":"1444141857.0",
+                  "swap":"0.0",
+                  "pl":"-2.2304"
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.claim_position(18411153)
+
         """
         payload = {
             "request": "/v1/position/claim",
@@ -238,10 +567,33 @@ class Client:
         return response
 
     def close_position(self, position_id):
-        """
+        """`Bitfinex close position reference
+        <https://docs.bitfinex.com/v1/reference#close-position>`_
+
         Closes the selected position with a market order.
-        :param position_id:
-        :return:
+
+        Parameters
+        ----------
+        position_id : int
+            The position ID
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "message": "",
+                    "order": {},
+                  "position": {}
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.close_position(18411153)
+
         """
         payload = {
             "request": "/v1/position/close",
@@ -252,12 +604,45 @@ class Client:
         return response
 
     def past_trades(self, timestamp='0.0', symbol='btcusd'):
+        """`Bitfinex past trades reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-past-trades>`_
+
+        View your past trades.
+
+        Parameters
+        ----------
+        timestamp : str
+            Trades made before this timestamp won’t be returned.
+
+        symbol : str
+            The `symbol <restv1.html#symbols>`_ you want information about.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "price":"246.94",
+                  "amount":"1.0",
+                  "timestamp":"1444141857.0",
+                  "exchange":"",
+                  "type":"Buy",
+                  "fee_currency":"USD",
+                  "fee_amount":"-0.49388",
+                  "tid":11970839,
+                  "order_id":446913929
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.past_trades('0.0','btcusd')
+            bfx_client.past_trades()
+
         """
-        Fetch past trades
-        :param timestamp:
-        :param symbol:
-        :return:
-        """
+
         payload = {
             "request": "/v1/mytrades",
             "nonce": self._nonce(),
@@ -270,12 +655,56 @@ class Client:
 
     def place_offer(self, currency, amount, rate, period, direction):
         """
-        :param currency:
-        :param amount:
-        :param anual rate:
-        :param period:
-        :param direction:
-        :return:
+        .. _new_offer:
+        
+        `Bitfinex place offer reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-new-offer>`_
+
+        Submit a new Offer
+
+        Parameters
+        ----------
+        currency : string
+            The name of the currency.
+
+        amount : float
+            Order size: how much to lend or borrow.
+
+        rate : float
+            Rate to lend or borrow at. In percentage per 365 days. (Set to 0 for FRR).
+
+        period : int
+            Number of days of the funding contract (in days)
+
+        direction : string
+            Either “lend” or “loan”.
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "id":13800585,
+                  "currency":"USD",
+                  "rate":"20.0",
+                  "period":2,
+                  "direction":"lend",
+                  "timestamp":"1444279698.21175971",
+                  "is_live":true,
+                  "is_cancelled":false,
+                  "original_amount":"50.0",
+                  "remaining_amount":"50.0",
+                  "executed_amount":"0.0",
+                  "offer_id":13800585
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.place_offer("USD",50.0,20.0,2,"lend")
+
         """
         payload = {
             "request": "/v1/offer/new",
@@ -291,10 +720,41 @@ class Client:
         return response
 
     def cancel_offer(self, offer_id):
-        """
+        """`Bitfinex cancel offer reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-cancel-offer>`_
 
-        :param offer_id:
-        :return:
+        Cancel an offer.
+
+        Parameters
+        ----------
+        offer_id : int
+            The offer ID given by `new_offer`_ function
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "id":13800585,
+                  "currency":"USD",
+                  "rate":"20.0",
+                  "period":2,
+                  "direction":"lend",
+                  "timestamp":"1444279698.0",
+                  "is_live":true,
+                  "is_cancelled":false,
+                  "original_amount":"50.0",
+                  "remaining_amount":"50.0",
+                  "executed_amount":"0.0"
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.cancel_offer(1231153)
+
         """
         payload = {
             "request": "/v1/offer/cancel",
@@ -306,10 +766,42 @@ class Client:
         return response
 
     def status_offer(self, offer_id):
-        """
+        """`Bitfinex status offer reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-offer-status>`_
 
-        :param offer_id:
-        :return:
+        Get the status of an offer. Is it active? Was it cancelled?
+        To what extent has it been executed? etc.
+
+        Parameters
+        ----------
+        offer_id : int
+            The offer ID given by `new_offer`_ function
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "id":13800585,
+                  "currency":"USD",
+                  "rate":"20.0",
+                  "period":2,
+                  "direction":"lend",
+                  "timestamp":"1444279698.0",
+                  "is_live":false,
+                  "is_cancelled":true,
+                  "original_amount":"50.0",
+                  "remaining_amount":"50.0",
+                  "executed_amount":"0.0"
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.status_offer(354352)
+
         """
         payload = {
             "request": "/v1/offer/status",
@@ -321,11 +813,38 @@ class Client:
         return response
 
     def offers_history(self):
+        """`Bitfinex offers history reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-offers-hist>`_
+
+        View your latest inactive offers. Limited to last 3 days and 1 request per minute.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "id":13800719,
+                  "currency":"USD",
+                  "rate":"31.39",
+                  "period":2,
+                  "direction":"lend",
+                  "timestamp":"1444280237.0",
+                  "is_live":false,
+                  "is_cancelled":true,
+                  "original_amount":"50.0",
+                  "remaining_amount":"50.0",
+                  "executed_amount":"0.0"
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.offers_history()
+
         """
 
-        :param offer_id:
-        :return:
-        """
         payload = {
             "request": "/v1/offers/hist",
             "nonce": self._nonce()
@@ -334,9 +853,36 @@ class Client:
         return response
 
     def active_offers(self):
-        """
-        Fetch active_offers
-        :return:
+        """`Bitfinex active offers reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-offers>`_
+
+        View your active offers.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "id":13800719,
+                  "currency":"USD",
+                  "rate":"31.39",
+                  "period":2,
+                  "direction":"lend",
+                  "timestamp":"1444280237.0",
+                  "is_live":true,
+                  "is_cancelled":false,
+                  "original_amount":"50.0",
+                  "remaining_amount":"50.0",
+                  "executed_amount":"0.0"
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.active_offers()
+
         """
         payload = {
             "request": "/v1/offers",
@@ -347,10 +893,32 @@ class Client:
         return response
 
     def balances(self):
-        """
-        Fetch balances
+        """`Bitfinex balances reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-wallet-balances>`_
 
-        :return:
+        See your balances
+
+        Returns
+        -------
+        list
+             ::
+
+                [
+                    {"type":"deposit", "currency":"btc", "amount":"0.0", "available":"0.0"},
+                    {"type":"deposit", "currency":"usd", "amount":"1.0", "available":"1.0"},
+                    {"type":"exchange", "currency":"btc", "amount":"1", "available":"1"},
+                    {"type":"exchange", "currency":"usd", "amount":"1", "available":"1"},
+                    {"type":"trading", "currency":"btc", "amount":"1", "available":"1"},
+                    {"type":"trading", "currency":"usd", "amount":"1", "available":"1"},
+                ...
+                ]
+
+        Example
+        -------
+         ::
+
+            bfx_client.balances()
+
         """
         payload = {
             "request": "/v1/balances",
@@ -360,14 +928,49 @@ class Client:
         return response
 
     def history(self, currency, since=0, until=9999999999, limit=500, wallet='exchange'):
-        """
-        View you balance ledger entries
-        :param currency: currency to look for
-        :param since: Optional. Return only the history after this timestamp.
-        :param until: Optional. Return only the history before this timestamp.
-        :param limit: Optional. Limit the number of entries to return. Default is 500.
-        :param wallet: Optional. Return only entries that took place in this wallet.
-        Accepted inputs are: “trading”, “exchange”, “deposit”.
+        """`Bitfinex balance history reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-wallet-balances>`_
+
+        View all of your balance ledger entries.
+
+
+        Parameters
+        ----------
+        currency : str
+            The currency to look for.
+
+        since : Optional str
+            Return only the history after this timestamp. (Max 3 months before until)
+
+        until : Optional str
+            Return only the history before this timestamp. (Default now)
+
+        limit : Optional int
+            Limit the number of entries to return.
+
+        wallet : Optional str
+            Return only entries that took place in this wallet.
+            Accepted inputs are: “trading”, “exchange”, “deposit”.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "currency":"USD",
+                  "amount":"-246.94",
+                  "balance":"515.4476526",
+                  "description":"Position claimed @ 245.2 on wallet trading",
+                  "timestamp":"1444277602.0"
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.history('USD')
+
         """
         payload = {
             "request": "/v1/history",
@@ -382,14 +985,54 @@ class Client:
         return response
 
     def movements(self, currency, start=0, end=9999999999, limit=10000, method='bitcoin'):
-        """
-        View you balance ledger entries
-        :param currency: currency to look for
-        :param since: Optional. Return only the history after this timestamp.
-        :param until: Optional. Return only the history before this timestamp.
-        :param limit: Optional. Limit the number of entries to return. Default is 500.
-        :param method: Optional. Return only entries that used this method.
-        Accepted inputs are: "bitcoin", "litecoin", "wire".
+        """`Bitfinex Deposit-Withdrawal History reference
+        <https://docs.bitfinex.com/v1/reference#rest-auth-wallet-balances>`_
+
+        View your past deposits/withdrawals.
+
+        Parameters
+        ----------
+        currency : str
+            The currency to look for.
+
+        start : Optional str
+            Return only the history after this timestamp. (Max 3 months before until)
+
+        end : Optional str
+            Return only the history before this timestamp. (Default now)
+
+        limit : Optional int
+            Limit the number of entries to return.
+
+        method : str
+            The method of the deposit/withdrawal (can be "bitcoin", "litecoin", "iota", "wire").
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "id":581183,
+                  "txid": 123456,
+                  "currency":"BTC",
+                  "method":"BITCOIN",
+                  "type":"WITHDRAWAL",
+                  "amount":".01",
+                  "description":"3QXYWgRGX2BPYBpUDBssGbeWEa5zq6snBZ, offchain transfer ",
+                  "address":"3QXYWgRGX2BPYBpUDBssGbeWEa5zq6snBZ",
+                  "status":"COMPLETED",
+                  "timestamp":"1443833327.0",
+                  "timestamp_created": "1443833327.1",
+                  "fee": 0.1
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.movements('USD')
+
         """
         payload = {
             "request": "/v1/history/movements",
@@ -407,59 +1050,179 @@ class Client:
         """
         .. _symbols:
 
-        GET /symbols
+        `Bitfinex symbols reference
+        <https://docs.bitfinex.com/v1/reference#rest-public-symbols>`_
 
-        curl https://api.bitfinex.com/v1/symbols
-        ['btcusd','ltcusd','ltcbtc']
+        A list of symbol names.
+
+        Returns
+        -------
+        list
+             ::
+
+                [
+                  "btcusd",
+                  "ltcusd",
+                  "ltcbtc",
+                  ...
+                ]
+
+        Example
+        -------
+         ::
+
+            bfx_client.symbols()
+
         """
         return self._get(self.url_for(PATH_SYMBOLS))
 
     def symbols_details(self):
-        """
-        GET /symbols_details
+        """`Bitfinex symbols details reference
+        <https://docs.bitfinex.com/v1/reference#rest-public-symbol-details>`_
 
-        curl https://api.bitfinex.com/v1/symbols_details ::
-            [{
-              "pair":"btcusd",
-              "price_precision":5,
-              "initial_margin":"30.0",
-              "minimum_margin":"15.0",
-              "maximum_order_size":"2000.0",
-              "minimum_order_size":"0.01",
-              "expiration":"NA"}]
+        Get a list of valid symbol IDs and the pair details.
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "pair":"btcusd",
+                  "price_precision":5,
+                  "initial_margin":"30.0",
+                  "minimum_margin":"15.0",
+                  "maximum_order_size":"2000.0",
+                  "minimum_order_size":"0.01",
+                  "expiration":"NA"
+                },{
+                  "pair":"ltcusd",
+                  "price_precision":5,
+                  "initial_margin":"30.0",
+                  "minimum_margin":"15.0",
+                  "maximum_order_size":"5000.0",
+                  "minimum_order_size":"0.1",
+                  "expiration":"NA"
+                },{
+                  "pair":"ltcbtc",
+                  "price_precision":5,
+                  "initial_margin":"30.0",
+                  "minimum_margin":"15.0",
+                  "maximum_order_size":"5000.0",
+                  "minimum_order_size":"0.1",
+                  "expiration":"NA"
+                },
+                ...
+                ]
+
+        Example
+        -------
+         ::
+
+            bfx_client.symbols_details()
 
         """
         return self._get(self.url_for("symbols_details"))
 
     def ticker(self, symbol):
-        """
-        GET /ticker/:symbol
+        """`Bitfinex ticker reference
+        <https://docs.bitfinex.com/v1/reference#rest-public-ticker>`_
 
-        curl https://api.bitfinex.com/v1/pubticker/btcusd ::
-            {'ask': '562.9999',
-            'timestamp': '1395552290.70933607',
-            'bid': '562.25',
-            'last_price': u'562.25',
-            'volume': '7842.11542563',
-            'mid': u'562.62495'}
+        The ticker is a high level overview of the state of the market. It shows you the current
+        best bid and ask, as well as the last trade price. It also includes information such as
+        daily volume and how much the price has moved over the last day.
+
+        Parameters
+        ----------
+        symbol : str
+            The `symbol <restv1.html#symbols>`_ you want information about.
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "mid":"244.755",
+                  "bid":"244.75",
+                  "ask":"244.76",
+                  "last_price":"244.82",
+                  "low":"244.2",
+                  "high":"248.19",
+                  "volume":"7842.11542563",
+                  "timestamp":"1444253422.348340958"
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.ticker("BTCUSD")
+
+
         """
+
         return self._get(self.url_for(PATH_TICKER, (symbol)))
 
     def today(self, symbol):
-        """
-        GET /today/:symbol
+        """.. _today:
 
-        curl "https://api.bitfinex.com/v1/today/btcusd"
-        {"low":"550.09","high":"572.2398","volume":"7305.33119836"}
+        Get today stats
+
+        Parameters
+        ----------
+        symbol : str
+            The `symbol <restv1.html#symbols>`_ you want information about.
+
+        Returns
+        -------
+        dict
+             ::
+
+                 {"low":"550.09","high":"572.2398","volume":"7305.33119836"}
+
+        Example
+        -------
+         ::
+
+            bfx_client.today("BTCUSD")
+
         """
+
         return self._get(self.url_for(PATH_TODAY, (symbol)))
 
     def stats(self, symbol):
-        """
-        curl https://api.bitfinex.com/v1/stats/btcusd ::
-            [{"period":1,"volume":"7410.27250155"},
-            {"period":7,"volume":"52251.37118006"},
-            {"period":30,"volume":"464505.07753251"}]
+        """`Bitfinex stats reference
+        <https://docs.bitfinex.com/v1/reference#rest-public-stats>`_
+
+        Various statistics about the requested pair.
+
+        Parameters
+        ----------
+        symbol : str
+            The `symbol <restv1.html#symbols>`_ you want information about.
+
+        Returns
+        -------
+        dict
+             ::
+
+                [{
+                  "period":1,
+                  "volume":"7967.96766158"
+                },{
+                  "period":7,
+                  "volume":"55938.67260266"
+                },{
+                  "period":30,
+                  "volume":"275148.09653645"
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.stats("BTCUSD")
 
         """
         data = self._get(self.url_for(PATH_STATS, (symbol)))
@@ -477,13 +1240,45 @@ class Client:
         return data
 
     def lendbook(self, currency, parameters=None):
-        """
-        curl "https://api.bitfinex.com/v1/lendbook/btc"
-        Optional parameters
-        limit_bids (int): Optional. Limit the number of bids (loan demands) returned.
-        May be 0 in which case the array of bids is empty. Default is 50.
-        limit_asks (int): Optional. Limit the number of asks (loan offers) returned.
-        May be 0 in which case the array of asks is empty. Default is 50.
+        """`Bitfinex Fundingbook reference
+        <https://docs.bitfinex.com/v1/reference#rest-public-fundingbook>`_
+
+        Get the full margin funding book
+
+        Parameters
+        ----------
+        currency : str
+            Currency
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "bids":[{
+                      'rate': '7.0482',
+                      'amount': '244575.00836875',
+                      'period': 30,
+                      'timestamp': '1539157649.0',
+                      'frr': False
+                  }]
+                  "asks":[{
+                      'rate': '5.6831',
+                      'amount': '63.5744',
+                      'period': 2,
+                      'timestamp':
+                      '1539165059.0',
+                      'frr': False
+                  }]
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.lendbook("USD")
+
         """
         data = self._get(self.url_for(PATH_LENDBOOK, path_arg=currency, parameters=parameters))
 
@@ -504,20 +1299,39 @@ class Client:
         return data
 
     def order_book(self, symbol, parameters=None):
-        """
-        curl "https://api.bitfinex.com/v1/book/btcusd"
+        """`Bitfinex Orderbook reference
+        <https://docs.bitfinex.com/v1/reference#rest-public-orderbook>`_
 
-        The 'bids' and 'asks' arrays will have multiple bid and ask dicts.
+        Get the full order book.
 
-        Optional parameters
-        limit_bids (int): Optional. Limit the number of bids returned.
-        May be 0 in which case the array of bids is empty. Default is 50.
-        limit_asks (int): Optional. Limit the number of asks returned.
-        May be 0 in which case the array of asks is empty. Default is 50.
+        Parameters
+        ----------
+        currency : str
+            Currency
 
-        eg.
-        curl "https://api.bitfinex.com/v1/book/btcusd?limit_bids=1&limit_asks=0"
-        {"bids":[{"price":"561.1101","amount":"0.985","timestamp":"1395557729.0"}],"asks":[]}
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "bids":[{
+                    "price":"574.61",
+                    "amount":"0.1439327",
+                    "timestamp":"1472506127.0"
+                  }],
+                  "asks":[{
+                    "price":"574.62",
+                    "amount":"19.1334",
+                    "timestamp":"1472506126.0"
+                  }]
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.order_book("BTCUSD")
 
         """
         data = self._get(self.url_for(PATH_ORDERBOOK, path_arg=symbol, parameters=parameters))
