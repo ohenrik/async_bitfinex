@@ -10,8 +10,8 @@ from autobahn.twisted.websocket import WebSocketClientFactory, \
 from twisted.internet import reactor, ssl
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet.error import ReactorAlreadyRunning
-from bitfinex.websockets import wss_utils
-from bitfinex.bfxutils import bfx_utils
+from bitfinex import utils
+from . import abbreviations
 
 # Example used to make send logic
 # https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
@@ -190,7 +190,7 @@ class WssClient(BitfinexSocketManager):
         Nonce must be an increasing number, if the API key has been used
         earlier or other frameworks that have used higher numbers you might
         need to increase the nonce_multiplier."""
-        return str(bfx_utils.get_nonce(self.nonce_multiplier))
+        return str(utils.get_nonce(self.nonce_multiplier))
 
     def authenticate(self, callback, filters=None):
         """Method used to create an authenticated channel that both recieves
@@ -251,8 +251,8 @@ class WssClient(BitfinexSocketManager):
 
         Parameters
         ----------
-        pair : str
-            Symbol pair to request data for.
+        symbol : str
+            Symbol to request data for.
 
         callback : func
             A function to use to handle incomming messages
@@ -291,7 +291,7 @@ class WssClient(BitfinexSocketManager):
         Parameters
         ----------
         symbol : str
-            Symbol pair to request data for.
+            Symbol to request data for.
 
         callback : func
             A function to use to handle incomming messages
@@ -326,12 +326,12 @@ class WssClient(BitfinexSocketManager):
 
     # Precision: R0, P0, P1, P2, P3
     def subscribe_to_orderbook(self, symbol, precision, callback):
-        """Subscribe to the orderbook of a given pair.
+        """Subscribe to the orderbook of a given symbol.
 
         Parameters
         ----------
         symbol : str
-            Symbol pair to request data for.
+            Symbol to request data for.
 
         precision : str
             Accepted values as strings {R0, P0, P1, P2, P3}
@@ -369,14 +369,13 @@ class WssClient(BitfinexSocketManager):
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         return self._start_socket(id_, payload, callback)
 
-    # TODO: Switch "pair" to "symbol" in new major version
-    def subscribe_to_candles(self, pair, timeframe, callback):
-        """Subscribe to the passed pair's OHLC data channel.
+    def subscribe_to_candles(self, symbol, timeframe, callback):
+        """Subscribe to the passed symbol's OHLC data channel.
 
         Parameters
         ----------
-        pair : str
-            Symbol pair to request data for
+        symbol : str
+            Symbol to request data for
 
         timeframe : str
             Accepted values as strings {1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h,
@@ -403,12 +402,12 @@ class WssClient(BitfinexSocketManager):
             my_client = WssClient(key, secret)
 
             my_client.subscribe_to_candles(
-                pair="BTCUSD",
+                symbol="BTCUSD",
                 timeframe="1m",
                 callback=my_candle_handler
             )
             my_client.subscribe_to_candles(
-                pair="ETHUSD",
+                symbol="ETHUSD",
                 timeframe="5m",
                 callback=my_candle_handler
             )
@@ -423,10 +422,10 @@ class WssClient(BitfinexSocketManager):
                 raise ValueError("timeframe must be any of %s" % valid_tfs)
         else:
             timeframe = '1m'
-        identifier = ('candles', pair, timeframe)
+        identifier = ('candles', symbol, timeframe)
         id_ = "_".join(identifier)
-        pair = 't' + pair if not pair.startswith('t') else pair
-        key = 'trade:' + timeframe + ':' + pair
+        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        key = 'trade:' + timeframe + ':' + symbol
         data = {
             'event': 'subscribe',
             'channel': 'candles',
@@ -444,7 +443,7 @@ class WssClient(BitfinexSocketManager):
             What channel id that should be pinged. Default "auth".
             To get channel id’s use ´client._conns.keys()´.
         """
-        client_cid = wss_utils.utc_now()
+        client_cid = utils.create_cid()
         data = {
             'event': 'ping',
             'cid': client_cid
@@ -453,8 +452,7 @@ class WssClient(BitfinexSocketManager):
         self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
         return client_cid
 
-    # TODO: Change pair to symbol
-    def new_order_op(self, order_type, pair, amount, price, price_trailing=None,
+    def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
                      price_aux_limit=None, price_oco_stop=None, hidden=0,
                      flags=None, tif=None):
         """
@@ -467,8 +465,8 @@ class WssClient(BitfinexSocketManager):
             "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "MARKET"
             prepended to it.
 
-        pair : str
-            The currency pair to be traded. e.g. BTCUSD
+        symbol : str
+            The currency symbol to be traded. e.g. BTCUSD
 
         amount :  float
             The amount to be traided.
@@ -504,7 +502,7 @@ class WssClient(BitfinexSocketManager):
 
             order_operation = my_client.new_order_op(
                 order_type="LIMIT",
-                pair="BTCUSD",
+                symbol="BTCUSD",
                 amount=0.004,
                 price=1000.0
             )
@@ -519,11 +517,11 @@ class WssClient(BitfinexSocketManager):
 
         """
         flags = flags or []
-        client_order_id = wss_utils.utc_now()
+        client_order_id = utils.create_cid()
         order_op = {
             'cid': client_order_id,
             'type': order_type,
-            'symbol': wss_utils.order_pair(pair),
+            'symbol': utils.order_symbol(symbol),
             'amount': amount,
             'price': price,
             'hidden': hidden,
@@ -543,7 +541,7 @@ class WssClient(BitfinexSocketManager):
 
         return order_op
 
-    def new_order(self, order_type, pair, amount, price, price_trailing=None,
+    def new_order(self, order_type, symbol, amount, price, price_trailing=None,
                   price_aux_limit=None, price_oco_stop=None, hidden=0,
                   flags=None, tif=None):
         """
@@ -556,8 +554,8 @@ class WssClient(BitfinexSocketManager):
             "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "MARKET"
             prepended to it.
 
-        pair : str
-            The currency pair to be traded. e.g. BTCUSD
+        symbol : str
+            The currency symbol to be traded. e.g. BTCUSD
 
         amount :  decimal string
             The amount to be traided.
@@ -602,7 +600,7 @@ class WssClient(BitfinexSocketManager):
 
             order_client_id = my_client.new_order(
                 order_type="LIMIT",
-                pair="BTCUSD",
+                symbol="BTCUSD",
                 amount=0.004,
                 price=1000.0
             )
@@ -610,7 +608,7 @@ class WssClient(BitfinexSocketManager):
         """
         operation = self.new_order_op(
             order_type=order_type,
-            pair=pair,
+            symbol=symbol,
             amount=amount,
             price=price,
             price_trailing=price_trailing,
@@ -622,7 +620,7 @@ class WssClient(BitfinexSocketManager):
         )
         data = [
             0,
-            wss_utils.get_notification_code('order new'),
+            abbreviations.get_notification_code('order new'),
             None,
             operation
         ]
@@ -653,22 +651,22 @@ class WssClient(BitfinexSocketManager):
 
             # You should only need to create and authenticate a client once.
             # Then simply reuse it later
+            from bitfinex import utils
             my_client = WssClient(key, secret)
             my_client.authenticate()
             my_client.start()
 
-            example_order_cid_to_cancel = 1538911910035
+            example_order_cid_to_cancel = 153925861909296
+
             # docs: http://bit.ly/2BVqwW6
             cancel_order_operation = {
                 'cid': example_order_cid_to_cancel,
-                'cid_date': datetime.utcfromtimestamp(
-                    example_order_cid_to_cancel/1000.0
-                ).strftime("%Y-%m-%d")
+                'cid_date': utils.cid_to_date(example_order_cid_to_cancel)
             }
 
             new_order_operation = my_client.new_order_op(
                 order_type="LIMIT",
-                pair="BTCUSD",
+                symbol="BTCUSD",
                 amount=0.004,
                 price=1000.0
             )
@@ -680,7 +678,7 @@ class WssClient(BitfinexSocketManager):
         """
         data = [
             0,
-            wss_utils.get_notification_code('order multi-op'),
+            abbreviations.get_notification_code('order multi-op'),
             None,
             operations
         ]
@@ -713,7 +711,7 @@ class WssClient(BitfinexSocketManager):
         """
         data = [
             0,
-            wss_utils.get_notification_code('order cancel'),
+            abbreviations.get_notification_code('order cancel'),
             None,
             {
                 # docs: http://bit.ly/2BVqwW6
@@ -760,7 +758,7 @@ class WssClient(BitfinexSocketManager):
         """
         data = [
             0,
-            wss_utils.get_notification_code('order cancel'),
+            abbreviations.get_notification_code('order cancel'),
             None,
             {
                 # docs: http://bit.ly/2BVqwW6
@@ -802,7 +800,7 @@ class WssClient(BitfinexSocketManager):
         """
         data = [
             0,
-            wss_utils.get_notification_code('order update'),
+            abbreviations.get_notification_code('order update'),
             None,
             order_settings
         ]

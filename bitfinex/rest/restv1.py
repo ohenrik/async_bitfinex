@@ -8,7 +8,7 @@ import base64
 import hmac
 import hashlib
 import requests
-from bitfinex.bfxutils import bfx_utils
+from bitfinex import utils
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"
@@ -92,7 +92,7 @@ class Client:
         Nonce must be an increasing number, if the API key has been used
         earlier or other frameworks that have used higher numbers you might
         need to increase the nonce_multiplier."""
-        return str(bfx_utils.get_nonce(self.nonce_multiplier))
+        return str(utils.get_nonce(self.nonce_multiplier))
 
     def _sign_payload(self, payload):
         j = json.dumps(payload)
@@ -656,7 +656,7 @@ class Client:
     def place_offer(self, currency, amount, rate, period, direction):
         """
         .. _new_offer:
-        
+
         `Bitfinex place offer reference
         <https://docs.bitfinex.com/v1/reference#rest-auth-new-offer>`_
 

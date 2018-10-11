@@ -1,16 +1,4 @@
 """Module for websocket utilities"""
-import datetime
-
-
-def utc_now():
-    now = datetime.datetime.utcnow()
-    return int(float(now.strftime("%s.%f"))*10000000)
-
-
-def order_pair(pair):
-    pair = 't' + pair if not pair.startswith('t') else pair
-    return pair
-
 
 ERROR_CODES = {
     10000: "Unknown error",
