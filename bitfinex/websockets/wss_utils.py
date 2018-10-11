@@ -2,7 +2,7 @@
 import datetime
 
 
-def UtcNow():
+def utc_now():
     now = datetime.datetime.utcnow()
     return int(float(now.strftime("%s.%f"))*10000000)
 

@@ -11,6 +11,7 @@ from twisted.internet import reactor, ssl
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.internet.error import ReactorAlreadyRunning
 from bitfinex.websockets import wss_utils
+from bitfinex.bfxutils import bfx_utils
 
 # Example used to make send logic
 # https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
@@ -178,10 +179,18 @@ class WssClient(BitfinexSocketManager):
     # Bitfinex commands
     ###########################################################################
 
-    def __init__(self, key=None, secret=None):  # client
+    def __init__(self, key=None, secret=None, nonce_multiplier=1.0):  # client
         super().__init__()
         self.key = key
         self.secret = secret
+        self.nonce_multiplier = nonce_multiplier
+
+    def _nonce(self):
+        """Returns a nonce used in authentication.
+        Nonce must be an increasing number, if the API key has been used
+        earlier or other frameworks that have used higher numbers you might
+        need to increase the nonce_multiplier."""
+        return str(bfx_utils.get_nonce(self.nonce_multiplier))
 
     def authenticate(self, callback, filters=None):
         """Method used to create an authenticated channel that both recieves
@@ -216,7 +225,7 @@ class WssClient(BitfinexSocketManager):
              my_client.start()
 
         """
-        nonce = int(wss_utils.UtcNow() * 1000000)
+        nonce = self._nonce()
         auth_payload = 'AUTH{}'.format(nonce)
         signature = hmac.new(
             self.secret.encode(),  # settings.API_SECRET.encode()
@@ -435,7 +444,7 @@ class WssClient(BitfinexSocketManager):
             What channel id that should be pinged. Default "auth".
             To get channel id’s use ´client._conns.keys()´.
         """
-        client_cid = wss_utils.UtcNow()
+        client_cid = wss_utils.utc_now()
         data = {
             'event': 'ping',
             'cid': client_cid
@@ -510,7 +519,7 @@ class WssClient(BitfinexSocketManager):
 
         """
         flags = flags or []
-        client_order_id = wss_utils.UtcNow()
+        client_order_id = wss_utils.utc_now()
         order_op = {
             'cid': client_order_id,
             'type': order_type,

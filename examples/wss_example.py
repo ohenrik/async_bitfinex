@@ -3,7 +3,7 @@
 import threading
 import logging
 from time import sleep
-from bitfinex import WssClient
+from bitfinex.websockets.client import WssClient
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -63,6 +63,7 @@ class MyWssTest():
 
     def _heartbeat_handler(self):
         LOGGER.info("new hb received")
+        LOGGER.info(f"nonce is {self.mywss._nonce()}")
         self._start_timers()
 
     def run(self):

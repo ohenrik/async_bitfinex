@@ -7,9 +7,8 @@ import json
 from json.decoder import JSONDecodeError
 import hmac
 import hashlib
-import time
 import requests
-
+from bitfinex.bfxutils import bfx_utils
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"
@@ -72,7 +71,7 @@ class Client:
         Nonce must be an increasing number, if the API key has been used
         earlier or other frameworks that have used higher numbers you might
         need to increase the nonce_multiplier."""
-        return str(float(time.time()) * self.nonce_multiplier)
+        return str(bfx_utils.get_nonce(self.nonce_multiplier))
 
     def _headers(self, path, nonce, body):
         """
