@@ -4,6 +4,15 @@
 
 A Python client for the Bitfinex API v1 and v2 + websockets for v2.
 
+### 1.0.0 release note
+
+Functionality related to nonces has been changed in release 1.0.0. This
+might cause existing keys that where used on earlier version of this library
+to stop working due to a "nonce too small" error.
+
+Either create a new key/secret to use with 1.0.0 or use a nonce multiplier of
+100000 (100k).
+
 ## Installation
 
     pip install bitfinex-v2
