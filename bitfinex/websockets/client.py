@@ -275,7 +275,7 @@ class WssClient(BitfinexSocketManager):
             )
             my_client.start()
         """
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         id_ = "_".join(["ticker", symbol])
         data = {
             'event': 'subscribe',
@@ -314,7 +314,7 @@ class WssClient(BitfinexSocketManager):
             )
             my_client.start()
         """
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         id_ = "_".join(["trades", symbol])
         data = {
             'event': 'subscribe',
@@ -358,7 +358,7 @@ class WssClient(BitfinexSocketManager):
             )
             my_client.start()
         """
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         id_ = "_".join(["order", symbol])
         data = {
             'event': 'subscribe',
@@ -424,7 +424,7 @@ class WssClient(BitfinexSocketManager):
             timeframe = '1m'
         identifier = ('candles', symbol, timeframe)
         id_ = "_".join(identifier)
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         key = 'trade:' + timeframe + ':' + symbol
         data = {
             'event': 'subscribe',
