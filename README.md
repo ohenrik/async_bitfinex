@@ -26,9 +26,9 @@ https://bitfinex.readthedocs.io/en/latest/
 
 This code has been tested on
 
-- Python 3.6
+- Python 3.6 and 3.5
 
-At the moment the library is only supported from 3.6 and above.
+At the moment the library is only supported from 3.5 and above.
 
 
 ## Contributing
