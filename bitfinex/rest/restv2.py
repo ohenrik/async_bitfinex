@@ -405,7 +405,7 @@ class Client:
             bfx_client.books('tBTCUSD')
 
         """
-        path = f"v2/book/{symbol}/{precision}"
+        path = "v2/book/{}/{}".format(symbol, precision)
         response = self._get(path)
         return response
 
@@ -503,30 +503,30 @@ class Client:
             msg = "Key must have one of the following values : {}".format(key_values)
             raise ValueError(msg)
 
-        common_stats_url = "v2/stats1/{key}:{size}:{symbol}".format(
-            key=kwargs['key'],
-            size=kwargs['size'],
-            symbol=kwargs['symbol']
+        common_stats_url = "v2/stats1/{}:{}:{}".format(
+            kwargs['key'],
+            kwargs['size'],
+            kwargs['symbol']
         )
 
         if kwargs['key'] == 'pos.size':
-            custom_stats_url = ":{side}/{section}?sort={sort}".format(
-                side=kwargs['side'],
-                section=kwargs['section'],
-                sort=str(kwargs['sort'])
+            custom_stats_url = ":{}/{}?sort={}".format(
+                kwargs['side'],
+                kwargs['section'],
+                str(kwargs['sort'])
             )
 
         if kwargs['key'] in ['funding.size', 'credits.size']:
-            custom_stats_url = "/{section}?sort={sort}".format(
-                section=kwargs['section'],
-                sort=str(kwargs['sort'])
+            custom_stats_url = "/{}?sort={}".format(
+                kwargs['section'],
+                str(kwargs['sort'])
             )
 
         if kwargs['key'] == 'credits.size.sym':
-            custom_stats_url = ":{symbol2}/{section}?sort={sort}".format(
-                symbol2=kwargs['symbol2'],
-                section=kwargs['section'],
-                sort=str(kwargs['sort'])
+            custom_stats_url = ":{}/{}?sort={}".format(
+                kwargs['symbol2'],
+                kwargs['section'],
+                str(kwargs['sort'])
             )
 
         path = "".join([common_stats_url, custom_stats_url])
