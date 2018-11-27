@@ -262,7 +262,6 @@ class Client:
 
                 # on trading pairs (ex. tBTCUSD)
                 [
-                  SYMBOL,
                   BID,
                   BID_SIZE,
                   ASK,
@@ -276,7 +275,6 @@ class Client:
                 ]
                 # on funding currencies (ex. fUSD)
                 [
-                  SYMBOL,
                   FRR,
                   BID,
                   BID_SIZE,
