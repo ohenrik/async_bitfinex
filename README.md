@@ -17,6 +17,22 @@ Either create a new key/secret to use with 1.0.0 or use a nonce multiplier of
 
     pip install bitfinex-v2
 
+## Usage example
+
+
+    from bitfinex import WssClient, ClientV2, ClientV1
+
+    def my_handler(message):
+      # Here you can do stuff with the messages
+      print(message)
+
+    my_client = WssClient()
+    my_client.subscribe_to_ticker(
+        symbol="BTCUSD",
+        callback=my_handler
+    )
+    my_client.start()
+
 ## Documentation
 
 The full documentation is available here:
