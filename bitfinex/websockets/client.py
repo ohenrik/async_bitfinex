@@ -275,7 +275,7 @@ class WssClient(BitfinexSocketManager):
             )
             my_client.start()
         """
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         id_ = "_".join(["ticker", symbol])
         data = {
             'event': 'subscribe',
@@ -314,7 +314,7 @@ class WssClient(BitfinexSocketManager):
             )
             my_client.start()
         """
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         id_ = "_".join(["trades", symbol])
         data = {
             'event': 'subscribe',
@@ -358,7 +358,7 @@ class WssClient(BitfinexSocketManager):
             )
             my_client.start()
         """
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         id_ = "_".join(["order", symbol])
         data = {
             'event': 'subscribe',
@@ -424,7 +424,7 @@ class WssClient(BitfinexSocketManager):
             timeframe = '1m'
         identifier = ('candles', symbol, timeframe)
         id_ = "_".join(identifier)
-        symbol = 't' + symbol if not symbol.startswith('t') else symbol
+        symbol = utils.order_symbol(symbol)
         key = 'trade:' + timeframe + ':' + symbol
         data = {
             'event': 'subscribe',
@@ -455,24 +455,34 @@ class WssClient(BitfinexSocketManager):
     def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
                      price_aux_limit=None, price_oco_stop=None, hidden=0,
                      flags=None, tif=None):
-        """
-        Create new order operation
+        """Create new order operation
 
         Parameters
         ----------
         order_type : str
             Order type. Must be one of: "LIMIT", "STOP", "MARKET",
-            "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "MARKET"
-            prepended to it.
+            "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "EXCHANGE"
+            prepended to it. All orders starting with EXCHANGE are made on the
+            exchange wallet. Orders without it is made on the margin wallet and
+            will start or change a position.
 
         symbol : str
             The currency symbol to be traded. e.g. BTCUSD
 
-        amount :  float
+        amount : decimal str
             The amount to be traided.
 
-        price : float
+        price : decimal str
             The price to buy at. Will be ignored for market orders.
+
+        price_trailing : decimal string
+            The trailing price
+
+        price_aux_limit : decimal string
+            Auxiliary Limit price (for STOP LIMIT)
+
+        price_oco_stop : decimal string
+            OCO stop price
 
         hidden : bool
             Whether or not to use the hidden order type.
@@ -551,13 +561,15 @@ class WssClient(BitfinexSocketManager):
         ----------
         order_type : str
             Order type. Must be one of: "LIMIT", "STOP", "MARKET",
-            "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "MARKET"
-            prepended to it.
+            "TRAILING STOP", "FOK", "STOP LIMIT" or equivelent with "EXCHANGE"
+            prepended to it. All orders starting with EXCHANGE are made on the
+            exchange wallet. Orders without it is made on the margin wallet and
+            will start or change a position.
 
         symbol : str
             The currency symbol to be traded. e.g. BTCUSD
 
-        amount :  decimal string
+        amount : decimal string
             The amount to be traided.
 
         price : decimal string
@@ -844,10 +856,10 @@ class WssClient(BitfinexSocketManager):
             my_client.authenticate(print)
             my_client.start()
 
-            my_client.calc([margin_sym_tBTCUSD,funding_sym_fUSD])
-            my_client.calc([margin_sym_tBTCUSD])
-            my_client.calc([position_tBTCUSD])
-            my_client.calc([wallet_exachange_USD])
+            my_client.calc(["margin_sym_tBTCUSD", "funding_sym_fUSD"])
+            my_client.calc(["margin_sym_tBTCUSD"])
+            my_client.calc(["position_tBTCUSD"])
+            my_client.calc(["wallet_exachange_USD"])
 
         .. Note::
 

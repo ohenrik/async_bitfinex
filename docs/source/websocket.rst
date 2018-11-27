@@ -1,7 +1,7 @@
 .. _websocket:
 
-Websockets
-==========
+V2 Websockets
+=============
 
 The code bellow is documented with complete examples of how to use the methods.
 
@@ -22,12 +22,12 @@ Quickstart example
     my_client.authenticate(print)
 
     my_client.subscribe_to_candles(
-        pair="BTCUSD",
+        symbol="BTCUSD",
         timeframe="1m",
         callback=my_candle_handler
     )
     my_client.subscribe_to_candles(
-        pair="ETHUSD",
+        symbol="ETHUSD",
         timeframe="5m",
         callback=my_candle_handler
     )
@@ -40,7 +40,7 @@ Quickstart example
     # Then create a new order
     order_client_id = my_client.new_order(
         order_type="LIMIT",
-        pair="BTCUSD",
+        symbol="BTCUSD",
         amount=0.004,
         price=1000.0
     )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import threading
 import logging
 from time import sleep
@@ -12,8 +12,8 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 
 
-KEY = ""
-SECRET = ""
+KEY = os.environ.get("API_KEY")
+SECRET = os.environ.get("API_SECRET")
 
 
 class MyWssTest():
@@ -82,12 +82,12 @@ class MyWssTest():
             #     print(f"new order is {exch_order}")
 
             # example update order
-            if counter == 7:
-                update_info = {
-                    "id": "16666882406",
-                    "delta": "-400"
-                }
-                self.mywss.update_order(**update_info)
+            # if counter == 7:
+            #     update_info = {
+            #         "id": "16666882406",
+            #         "delta": "-400"
+            #     }
+            #     self.mywss.update_order(**update_info)
 
             # example use calculations
             if counter == 8:
