@@ -15,7 +15,7 @@ Either create a new key/secret to use with 1.0.0 or use a nonce multiplier of
 
 ## Installation
 
-    pip install bitfinex-v2
+    pip install bitfinex
 
 ## Documentation
 
