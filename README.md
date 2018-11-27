@@ -15,7 +15,7 @@ Either create a new key/secret to use with 1.0.0 or use a nonce multiplier of
 
 ## Installation
 
-    pip install bitfinex
+    pip install bitfinex-v2
 
 ## Documentation
 
@@ -26,9 +26,9 @@ https://bitfinex.readthedocs.io/en/latest/
 
 This code has been tested on
 
-- Python 3.6 and 3.5
+- Python 3.6
 
-At the moment the library is only supported from 3.5 and above.
+At the moment the library is only supported from 3.6 and above.
 
 
 ## Contributing
