@@ -184,8 +184,8 @@ class WssClient(BitfinexSocketManager):
         self.nonce_multiplier = nonce_multiplier
 
     def stop(self):
-        """Tryes to close all connections and finally stops the reactor
-        (background process running all connections)."""
+        """Tries to close all connections and finally stops the reactor.
+        Properly stops the program."""
         try:
             self.close()
         finally:
