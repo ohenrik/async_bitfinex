@@ -14,6 +14,10 @@ open_doc:
 clean_doc:
 	rm -rf docs/build/
 
+publish:
+	python setup.py sdist bdist_wheel upload
+
+
 .DEFAULT_GOAL := show-help
 
 # Inspired by <http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html>
