@@ -3,7 +3,6 @@ import threading
 import json
 import hmac
 import hashlib
-
 from autobahn.twisted.websocket import WebSocketClientFactory, \
     WebSocketClientProtocol, \
     connectWS
@@ -151,7 +150,6 @@ class BitfinexSocketManager(threading.Thread):
         keys = set(self._conns.keys())
         for key in keys:
             self.stop_socket(key)
-
         self._conns = {}
 
 
@@ -184,6 +182,14 @@ class WssClient(BitfinexSocketManager):
         self.key = key
         self.secret = secret
         self.nonce_multiplier = nonce_multiplier
+
+    def stop(self):
+        """Tryes to close all connections and finally stops the reactor
+        (background process running all connections)."""
+        try:
+            self.close()
+        finally:
+            reactor.stop()
 
     def _nonce(self):
         """Returns a nonce used in authentication.
