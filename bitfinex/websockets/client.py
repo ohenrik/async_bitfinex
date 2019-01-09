@@ -460,7 +460,7 @@ class WssClient(BitfinexSocketManager):
 
     def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
                      price_aux_limit=None, price_oco_stop=None, hidden=0,
-                     flags=None, tif=None, set_cid=False):
+                     flags=None, tif=None, set_cid=True):
         """Create new order operation
 
         Parameters
@@ -566,7 +566,7 @@ class WssClient(BitfinexSocketManager):
 
     def new_order(self, order_type, symbol, amount, price, price_trailing=None,
                   price_aux_limit=None, price_oco_stop=None, hidden=0,
-                  flags=None, tif=None, set_cid=False):
+                  flags=None, tif=None, set_cid=True):
         """
         Create new order.
 
