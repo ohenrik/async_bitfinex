@@ -29,7 +29,7 @@ def cid_to_date(cid):
         A string formated date (e.g. YYYY-MM-DD, 2018-10-01)
     """
     return datetime.utcfromtimestamp(
-        cid/10000000.0
+        cid/1000000.0
     ).strftime("%Y-%m-%d")
 
 def get_nonce(multiplier):
