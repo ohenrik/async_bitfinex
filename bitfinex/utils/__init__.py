@@ -13,7 +13,7 @@ def create_cid():
         A integer number equal to the current timestamp * 10 mill.
     """
     now = datetime.utcnow()
-    return int(float(now.strftime("%s.%f"))*10000000)
+    return int(float(now.strftime("%s.%f"))*1000000)
 
 def cid_to_date(cid):
     """Converts a cid to date string YYYY-MM-DD
