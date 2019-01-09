@@ -460,7 +460,7 @@ class WssClient(BitfinexSocketManager):
 
     def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
                      price_aux_limit=None, price_oco_stop=None, hidden=0,
-                     flags=None, tif=None):
+                     flags=None, tif=None, set_cid=True):
         """Create new order operation
 
         Parameters
@@ -496,6 +496,11 @@ class WssClient(BitfinexSocketManager):
         flags : list
             A list of integers for the different flags. Will be added together
             into a unique integer.
+
+        tif : datetime string
+
+        set_cid : bool
+            wheter or not to set a cid.
 
         Returns
         -------
@@ -533,9 +538,7 @@ class WssClient(BitfinexSocketManager):
 
         """
         flags = flags or []
-        client_order_id = utils.create_cid()
         order_op = {
-            'cid': client_order_id,
             'type': order_type,
             'symbol': utils.order_symbol(symbol),
             'amount': amount,
@@ -555,11 +558,15 @@ class WssClient(BitfinexSocketManager):
         if tif:
             order_op['tif'] = tif
 
+        if set_cid:
+            client_order_id = utils.create_cid()
+            order_op['cid'] = client_order_id
+
         return order_op
 
     def new_order(self, order_type, symbol, amount, price, price_trailing=None,
                   price_aux_limit=None, price_oco_stop=None, hidden=0,
-                  flags=None, tif=None):
+                  flags=None, tif=None, set_cid=True):
         """
         Create new order.
 
@@ -599,6 +606,9 @@ class WssClient(BitfinexSocketManager):
 
         tif : datetime string
 
+        set_cid : bool
+            wheter or not to set a cid.
+
         Returns
         -------
         int
@@ -634,7 +644,8 @@ class WssClient(BitfinexSocketManager):
             price_oco_stop=price_oco_stop,
             hidden=hidden,
             flags=flags,
-            tif=tif
+            tif=tif,
+            set_cid=set_cid
         )
         data = [
             0,
@@ -644,7 +655,10 @@ class WssClient(BitfinexSocketManager):
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-        return operation["cid"]
+        if set_cid is True:
+            return operation["cid"]
+        else:
+            return None
 
     def multi_order(self, operations):
         """Multi order operation.
