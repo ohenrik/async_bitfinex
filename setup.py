@@ -1,15 +1,11 @@
 from setuptools import setup, find_packages
 
-VERSION = '1.0.2'
+VERSION = '1.0.dev3.7'
 
 # Runtime dependencies. See requirements.txt for development dependencies.
 DEPENDENCIES = [
     'requests',
-    'httpretty',
-    "twisted",
-    "autobahn",
-    "pyopenssl",
-    "service_identity",
+    "websockets",
 ]
 
 setup(

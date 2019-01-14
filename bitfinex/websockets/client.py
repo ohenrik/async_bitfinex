@@ -1,161 +1,21 @@
 # coding=utf-8
-import threading
+from datetime import datetime
 import json
 import hmac
 import hashlib
+import asyncio
+import websockets
 
-from autobahn.twisted.websocket import WebSocketClientFactory, \
-    WebSocketClientProtocol, \
-    connectWS
-from twisted.internet import reactor, ssl
-from twisted.internet.protocol import ReconnectingClientFactory
-from twisted.internet.error import ReactorAlreadyRunning
 from bitfinex import utils
 from . import abbreviations
+
+
+STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
 # Example used to make send logic
 # https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
 
-
-class BitfinexClientProtocol(WebSocketClientProtocol):
-
-    def __init__(self, factory, payload=None):
-        super().__init__()
-        self.factory = factory
-        self.payload = payload
-
-    def onOpen(self):
-        self.factory.protocol_instance = self
-
-    def onConnect(self, response):
-        if self.payload:
-            self.sendMessage(self.payload, isBinary=False)
-        # reset the delay after reconnecting
-        self.factory.resetDelay()
-
-    def onMessage(self, payload, isBinary):
-        if not isBinary:
-            try:
-                payload_obj = json.loads(payload.decode('utf8'))
-            except ValueError:
-                pass
-            else:
-                self.factory.callback(payload_obj)
-
-
-class BitfinexReconnectingClientFactory(ReconnectingClientFactory):
-
-    # set initial delay to a short time
-    initialDelay = 0.1
-
-    maxDelay = 20
-
-    maxRetries = 30
-
-
-class BitfinexClientFactory(WebSocketClientFactory, BitfinexReconnectingClientFactory):
-
-    def __init__(self, *args, payload=None, **kwargs):
-        WebSocketClientFactory.__init__(self, *args, **kwargs)
-        self.protocol_instance = None
-        self.base_client = None
-        self.payload = payload
-
-    protocol = BitfinexClientProtocol
-    _reconnect_error_payload = {
-        'e': 'error',
-        'm': 'Max reconnect retries reached'
-    }
-
-    def clientConnectionFailed(self, connector, reason):
-        self.retry(connector)
-        if self.retries > self.maxRetries:
-            self.callback(self._reconnect_error_payload)
-
-    def clientConnectionLost(self, connector, reason):
-        self.retry(connector)
-        if self.retries > self.maxRetries:
-            self.callback(self._reconnect_error_payload)
-
-    def buildProtocol(self, addr):
-        return BitfinexClientProtocol(self, payload=self.payload)
-
-
-class BitfinexSocketManager(threading.Thread):
-
-    STREAM_URL = 'wss://api.bitfinex.com/ws/2'
-
-    def __init__(self):  # client
-        """Initialise the BitfinexSocketManager"""
-        threading.Thread.__init__(self)
-        self.factories = {}
-        self._connected_event = threading.Event()
-        self._conns = {}
-        self._user_timer = None
-        self._user_listen_key = None
-        self._user_callback = None
-
-    def _start_socket(self, id_, payload, callback):
-        if id_ in self._conns:
-            return False
-
-        factory_url = self.STREAM_URL
-        factory = BitfinexClientFactory(factory_url, payload=payload)
-        factory.base_client = self
-        factory.protocol = BitfinexClientProtocol
-        factory.callback = callback
-        factory.reconnect = True
-        self.factories[id_] = factory
-        reactor.callFromThread(self.add_connection, id_)
-
-    def add_connection(self, id_):
-        """
-        Convenience function to connect and store the resulting
-        connector.
-        """
-        factory = self.factories[id_]
-        context_factory = ssl.ClientContextFactory()
-        self._conns[id_] = connectWS(factory, context_factory)
-
-    def stop_socket(self, conn_key):
-        """Stop a websocket given the connection key
-
-        Parameters
-        ----------
-        conn_key : str
-            Socket connection key
-
-        Returns
-        -------
-        str, bool
-            connection key string if successful, False otherwise
-        """
-        if conn_key not in self._conns:
-            return
-
-        # disable reconnecting if we are closing
-        self._conns[conn_key].factory = WebSocketClientFactory(self.STREAM_URL)
-        self._conns[conn_key].disconnect()
-        del self._conns[conn_key]
-
-    def run(self):
-        try:
-            reactor.run(installSignalHandlers=False)
-        except ReactorAlreadyRunning:
-            # Ignore error about reactor already running
-            pass
-
-    def close(self):
-        """Close all connections
-        """
-        keys = set(self._conns.keys())
-        for key in keys:
-            self.stop_socket(key)
-
-        self._conns = {}
-
-
-class WssClient(BitfinexSocketManager):
+class WssClient():
     """Websocket client for bitfinex.
 
     Parameters
@@ -183,6 +43,7 @@ class WssClient(BitfinexSocketManager):
         super().__init__()
         self.key = key
         self.secret = secret
+        self.connections = {}
         self.nonce_multiplier = nonce_multiplier
 
     def _nonce(self):
@@ -192,7 +53,51 @@ class WssClient(BitfinexSocketManager):
         need to increase the nonce_multiplier."""
         return str(utils.get_nonce(self.nonce_multiplier))
 
-    def authenticate(self, callback, filters=None):
+    async def stop_channel(self, connection_name):
+        """Closes one spesific webscoket connection by name
+
+        Parameters
+        ----------
+        connection_name : str
+            the name of the websocket connection to close.
+        """
+        print(f"Stopping: {connection_name}")
+        await self.connections[connection_name].close()
+
+    async def stop_all(self):
+        """Closes all webscoket connections"""
+        for connection_name in self.connections:
+            await self.stop_channel(connection_name)
+
+    async def create_connection(self, channel_name, payload, callback):
+        """Create a new websocket connection, store the connection and
+        assign a callback for incomming messages.
+
+        Parameters
+        ----------
+        channel_name :  str
+            Name/id of the websocket channel. Used when sending messages or for
+            stopping a channel.
+
+        payload : str
+            A json dictionary containing the subscribe instructions for bitfinex.
+
+        callback : func
+            A function to use to handle incomming messages. This channel wil
+            be handling all messages returned from operations like new_order or
+            cancel_order, so make sure you handle all these messages.
+        """
+        async with websockets.connect(STREAM_URL) as websocket:
+            await websocket.send(payload)
+            self.connections[channel_name] = websocket
+            async for message in self.connections[channel_name]:
+                message = json.loads(message)
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(message)
+                else:
+                    callback(message)
+
+    async def authenticate(self, callback, filters=None):
         """Method used to create an authenticated channel that both recieves
         account spesific messages and is used to send account spesific messages.
         So in order to be able to use the new_order method, you have to
@@ -244,7 +149,9 @@ class WssClient(BitfinexSocketManager):
         if filters:
             data['filter'] = filters
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket("auth", payload, callback)
+        await self.create_connection("auth", payload, callback)
+        return "auth"
+
 
     def subscribe_to_ticker(self, symbol, callback):
         """Subscribe to the passed symbol ticks data channel.
@@ -276,14 +183,15 @@ class WssClient(BitfinexSocketManager):
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        id_ = "_".join(["ticker", symbol])
+        channel_name = "_".join(["ticker", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'ticker',
             'symbol': symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        await self.create_connection(channel_name, payload, callback)
+        return channel_name
 
     def subscribe_to_trades(self, symbol, callback):
         """Subscribe to the passed symbol trades data channel.
@@ -315,14 +223,15 @@ class WssClient(BitfinexSocketManager):
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        id_ = "_".join(["trades", symbol])
+        channel_name = "_".join(["trades", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'trades',
             'symbol': symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        await self.create_connection(channel_name, payload, callback)
+        return channel_name
 
     # Precision: R0, P0, P1, P2, P3
     def subscribe_to_orderbook(self, symbol, precision, callback):
@@ -359,7 +268,7 @@ class WssClient(BitfinexSocketManager):
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        id_ = "_".join(["order", symbol])
+        channel_name = "_".join(["order", symbol])
         data = {
             'event': 'subscribe',
             "channel": "book",
@@ -367,7 +276,8 @@ class WssClient(BitfinexSocketManager):
             'symbol': symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        await self.create_connection(channel_name, payload, callback)
+        return channel_name
 
     def subscribe_to_candles(self, symbol, timeframe, callback):
         """Subscribe to the passed symbol's OHLC data channel.
@@ -423,7 +333,7 @@ class WssClient(BitfinexSocketManager):
         else:
             timeframe = '1m'
         identifier = ('candles', symbol, timeframe)
-        id_ = "_".join(identifier)
+        channel_name = "_".join(identifier)
         symbol = utils.order_symbol(symbol)
         key = 'trade:' + timeframe + ':' + symbol
         data = {
@@ -432,7 +342,8 @@ class WssClient(BitfinexSocketManager):
             'key': key,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        await self.create_connection(channel_name, payload, callback)
+        return channel_name
 
     def ping(self, channel="auth"):
         """Ping bitfinex.
@@ -449,7 +360,7 @@ class WssClient(BitfinexSocketManager):
             'cid': client_cid
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections[channel].send(payload)
         return client_cid
 
     def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
@@ -637,7 +548,7 @@ class WssClient(BitfinexSocketManager):
             operation
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
         return operation["cid"]
 
     def multi_order(self, operations):
@@ -695,7 +606,7 @@ class WssClient(BitfinexSocketManager):
             operations
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
         return [order[1].get("cid", None) for order in operations]
 
     def cancel_order(self, order_id):
@@ -731,7 +642,7 @@ class WssClient(BitfinexSocketManager):
             }
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
 
     def cancel_order_cid(self, order_cid, order_date):
         """Cancel order using the client id and the date of the cid. Both are
@@ -779,7 +690,7 @@ class WssClient(BitfinexSocketManager):
             }
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
 
     def update_order(self, **order_settings):
         """Update order using the order id
@@ -817,7 +728,7 @@ class WssClient(BitfinexSocketManager):
             order_settings
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
 
     def calc(self, *calculations):
         """
@@ -878,4 +789,4 @@ class WssClient(BitfinexSocketManager):
             calculations
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
