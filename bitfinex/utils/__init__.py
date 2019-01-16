@@ -4,16 +4,16 @@ import time
 from datetime import datetime
 
 def create_cid():
-    """Create a new Client order id. Based on timestamp multiplied to 100k to
+    """Create a new Client order id. Based on timestamp multiplied to 10k to
     make it improbable that two actions are assigned the same cid.
 
     Returns
     -------
     int
-        A integer number equal to the current timestamp * 10 mill.
+        A integer number equal to the current timestamp * 10 thousend.
     """
     now = datetime.utcnow()
-    return int(float(now.strftime("%s.%f"))*10000000)
+    return int(float(now.strftime("%s.%f"))*10000)
 
 def cid_to_date(cid):
     """Converts a cid to date string YYYY-MM-DD
