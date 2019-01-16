@@ -12,9 +12,6 @@ from . import abbreviations
 
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
-# Example used to make send logic
-# https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
-
 class WssClient():
     """Websocket client for bitfinex.
 
@@ -153,7 +150,7 @@ class WssClient():
         return "auth"
 
 
-    def subscribe_to_ticker(self, symbol, callback):
+    async def subscribe_to_ticker(self, symbol, callback):
         """Subscribe to the passed symbol ticks data channel.
 
         Parameters
@@ -193,7 +190,7 @@ class WssClient():
         await self.create_connection(channel_name, payload, callback)
         return channel_name
 
-    def subscribe_to_trades(self, symbol, callback):
+    async def subscribe_to_trades(self, symbol, callback):
         """Subscribe to the passed symbol trades data channel.
 
         Parameters
@@ -234,7 +231,7 @@ class WssClient():
         return channel_name
 
     # Precision: R0, P0, P1, P2, P3
-    def subscribe_to_orderbook(self, symbol, precision, callback):
+    async def subscribe_to_orderbook(self, symbol, precision, callback):
         """Subscribe to the orderbook of a given symbol.
 
         Parameters
@@ -279,7 +276,7 @@ class WssClient():
         await self.create_connection(channel_name, payload, callback)
         return channel_name
 
-    def subscribe_to_candles(self, symbol, timeframe, callback):
+    async def subscribe_to_candles(self, symbol, timeframe, callback):
         """Subscribe to the passed symbol's OHLC data channel.
 
         Parameters
@@ -345,7 +342,7 @@ class WssClient():
         await self.create_connection(channel_name, payload, callback)
         return channel_name
 
-    def ping(self, channel="auth"):
+    async def ping(self, channel="auth"):
         """Ping bitfinex.
 
         Parameters
@@ -462,7 +459,7 @@ class WssClient():
 
         return order_op
 
-    def new_order(self, order_type, symbol, amount, price, price_trailing=None,
+    async def new_order(self, order_type, symbol, amount, price, price_trailing=None,
                   price_aux_limit=None, price_oco_stop=None, hidden=0,
                   flags=None, tif=None):
         """
@@ -551,7 +548,7 @@ class WssClient():
         await self.connections["auth"].send(payload)
         return operation["cid"]
 
-    def multi_order(self, operations):
+    async def multi_order(self, operations):
         """Multi order operation.
 
         Parameters
@@ -609,7 +606,7 @@ class WssClient():
         await self.connections["auth"].send(payload)
         return [order[1].get("cid", None) for order in operations]
 
-    def cancel_order(self, order_id):
+    async def cancel_order(self, order_id):
         """Cancel order
 
         Parameters
@@ -644,7 +641,7 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         await self.connections["auth"].send(payload)
 
-    def cancel_order_cid(self, order_cid, order_date):
+    async def cancel_order_cid(self, order_cid, order_date):
         """Cancel order using the client id and the date of the cid. Both are
         returned from the new_order command from this library.
 
@@ -692,7 +689,7 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         await self.connections["auth"].send(payload)
 
-    def update_order(self, **order_settings):
+    async def update_order(self, **order_settings):
         """Update order using the order id
 
         Parameters
@@ -730,7 +727,7 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         await self.connections["auth"].send(payload)
 
-    def calc(self, *calculations):
+    async def calc(self, *calculations):
         """
         This message will be used by clients to trigger specific calculations,
         so we don't end up in calculating data that is not usually needed.
