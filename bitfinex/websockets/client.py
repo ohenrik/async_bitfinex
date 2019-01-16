@@ -8,9 +8,10 @@ import websockets
 
 from bitfinex import utils
 from . import abbreviations
-
+from . input_response_intercept import InputResponseInterceptor
 
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
+
 
 class WssClient():
     """Websocket client for bitfinex.
@@ -32,16 +33,15 @@ class WssClient():
 
     """
 
-    ###########################################################################
-    # Bitfinex commands
-    ###########################################################################
-
-    def __init__(self, key=None, secret=None, nonce_multiplier=1.0):  # client
+    def __init__(self, key=None, secret=None, nonce_multiplier=10000.0):  # client
         super().__init__()
         self.key = key
         self.secret = secret
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
+        self.futures = {}
+        self.timeout_seconds = 30
+        self.input_interceptor = InputResponseInterceptor()
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -89,10 +89,13 @@ class WssClient():
             self.connections[channel_name] = websocket
             async for message in self.connections[channel_name]:
                 message = json.loads(message)
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(message)
-                else:
-                    callback(message)
+                if isinstance(message, list):
+                    message = self.input_interceptor(message, self.futures)
+                if message:
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(message)
+                    else:
+                        callback(message)
 
     async def authenticate(self, callback, filters=None):
         """Method used to create an authenticated channel that both recieves
@@ -545,8 +548,16 @@ class WssClient():
             operation
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        # Create a future method for handling responses
+        future_id = f"on_{operation['cid']}"
+        self.futures[future_id] = asyncio.Future()
         await self.connections["auth"].send(payload)
-        return operation["cid"]
+        # Wait for order confirmation or error, then return the response with the
+        # cid of the order.
+        return await asyncio.wait_for(
+            self.futures[future_id],
+            timeout=self.timeout_seconds
+        )
 
     async def multi_order(self, operations):
         """Multi order operation.
@@ -639,7 +650,11 @@ class WssClient():
             }
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        self.futures[order_id] = asyncio.Future()
         await self.connections["auth"].send(payload)
+        # Wait for order confirmation or error, then return the response with the
+        # cid of the order.
+        await self.futures[order_id]
 
     async def cancel_order_cid(self, order_cid, order_date):
         """Cancel order using the client id and the date of the cid. Both are
@@ -687,7 +702,11 @@ class WssClient():
             }
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        self.futures[order_cid] = asyncio.Future()
         await self.connections["auth"].send(payload)
+        # Wait for order confirmation or error, then return the response with the
+        # cid of the order.
+        await self.futures[order_cid]
 
     async def update_order(self, **order_settings):
         """Update order using the order id
@@ -725,7 +744,12 @@ class WssClient():
             order_settings
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        # Create a future method for handling responses
+        self.futures[order_settings["id"]] = asyncio.Future()
         await self.connections["auth"].send(payload)
+        # Wait for order confirmation or error, then return the response with the
+        # cid of the order.
+        await self.futures[order_settings["id"]]
 
     async def calc(self, *calculations):
         """
