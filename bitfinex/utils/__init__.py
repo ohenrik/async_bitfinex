@@ -29,7 +29,7 @@ def cid_to_date(cid):
         A string formated date (e.g. YYYY-MM-DD, 2018-10-01)
     """
     return datetime.utcfromtimestamp(
-        cid/10000000.0
+        cid/10000.0
     ).strftime("%Y-%m-%d")
 
 def get_nonce(multiplier):
@@ -37,7 +37,7 @@ def get_nonce(multiplier):
     Nonce must be an increasing number. If other frameworks have used
     higher numbers you might need to increase the nonce_multiplier.
     """
-    return str(float(time.time()) * multiplier)
+    return int(time.time() * multiplier)
 
 TRADE_SYMBOL_MISSING = re.compile(r"^[a-zA-Z]{6}$")
 """Regular explression used to match trade symbols without a leading t (e.g. BTCUSD)"""
