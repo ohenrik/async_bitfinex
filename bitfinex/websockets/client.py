@@ -1,5 +1,6 @@
 # coding=utf-8
-from datetime import datetime
+# from datetime import datetime
+# from concurrent.futures import TimeoutError
 import json
 import hmac
 import hashlib
@@ -40,7 +41,7 @@ class WssClient():
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = {}
-        self.timeout_seconds = 30
+        self.timeout_seconds = 3
         self.input_interceptor = InputResponseInterceptor()
 
     def _nonce(self):
@@ -150,7 +151,6 @@ class WssClient():
             data['filter'] = filters
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         await self.create_connection("auth", payload, callback)
-        return "auth"
 
 
     async def subscribe_to_ticker(self, symbol, callback):
@@ -519,7 +519,7 @@ class WssClient():
             # Then simply reuse it later
             my_client = WssClient(key, secret)
             my_client.authenticate()
-            my_client.start()
+
 
             order_client_id = my_client.new_order(
                 order_type="LIMIT",
@@ -617,13 +617,17 @@ class WssClient():
         await self.connections["auth"].send(payload)
         return [order[1].get("cid", None) for order in operations]
 
-    async def cancel_order(self, order_id):
-        """Cancel order
+    async def cancel_order(self, order_id=None, order_cid=None, order_date=None):
+        """Cancel order using either the id (order_id) or the client id (order_cid).
 
         Parameters
         ----------
         order_id : int, str
             Order id created by Bitfinex
+        order_cid : str
+            cid string. e.g. "1234154"
+        order_date : str
+            Iso formated order date. e.g. "2012-01-23"
 
         Example
         -------
@@ -639,74 +643,50 @@ class WssClient():
                 order_id=1234
             )
 
-        """
-        data = [
-            0,
-            abbreviations.get_notification_code('order cancel'),
-            None,
-            {
-                # docs: http://bit.ly/2BVqwW6
-                'id': order_id
-            }
-        ]
-        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[order_id] = asyncio.Future()
-        await self.connections["auth"].send(payload)
-        # Wait for order confirmation or error, then return the response with the
-        # cid of the order.
-        await self.futures[order_id]
-
-    async def cancel_order_cid(self, order_cid, order_date):
-        """Cancel order using the client id and the date of the cid. Both are
-        returned from the new_order command from this library.
-
-        Parameters
-        ----------
-        order_cid : str
-            cid string. e.g. "1234154"
-
-        order_date : str
-            Iso formated order date. e.g. "2012-01-23"
-
-
-        Example
-        -------
-         ::
-
-            # You should only need to create and authenticate a client once.
-            # Then simply reuse it later
-            my_client = WssClient(key, secret)
-            my_client.authenticate()
-            my_client.start()
-
-            # order_cid created by this library is always a milliseconds
-            # time stamp. So you can just divide it by 1000 to get the timestamp.
+            # Using client id formated as timestamp * 10k (from utils)
             my_client.cancel_order(
-                order_cid=1538911910035,
-                order_date=(
-                    datetime.utcfromtimestamp(
-                        1538911910035/1000.0
-                    ).strftime("%Y-%m-%d")
-                )
+                order_cid=1234
+                # Optionally supply the order_date if you are using a custom cid format
+                # order_date="2019-01-01"
             )
 
         """
+        assert any([order_id, order_cid]), "Requires order_id or order_cid"
+
+        if order_id:
+            cancel_message = {'id': order_id}
+        else:
+            cancel_message = {
+                # docs: http://bit.ly/2BVqwW6
+                'cid': order_cid,
+                'cid_date': order_date or utils.cid_to_date(order_cid)
+            }
+
         data = [
             0,
             abbreviations.get_notification_code('order cancel'),
             None,
-            {
-                # docs: http://bit.ly/2BVqwW6
-                'cid': order_cid,
-                'cid_date': order_date
-            }
+            cancel_message
         ]
+        future_id = f"oc_{order_id or order_cid}"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[order_cid] = asyncio.Future()
+        self.futures[future_id] = asyncio.Future()
         await self.connections["auth"].send(payload)
         # Wait for order confirmation or error, then return the response with the
         # cid of the order.
-        await self.futures[order_cid]
+        try:
+            return await asyncio.wait_for(
+                self.futures[future_id],
+                timeout=self.timeout_seconds
+            )
+        except TimeoutError:
+            return {
+                "status": "ERROR",
+                "cid": order_cid,
+                "id": order_id,
+                "message": None,
+                "comment": "TimeoutError was raised. No order found or no response."
+            }
 
     async def update_order(self, **order_settings):
         """Update order using the order id

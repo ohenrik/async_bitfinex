@@ -27,14 +27,16 @@ class InputResponseInterceptor:
         """Lookup table for intercept methods for each message type."""
         return {
             "n": self.info_message,
-            "on": self.order_new_success
+            # "on": self.order_new_success,
+            # "oc": self.order_cancel_success,
         }
 
     @property
     def info_message_types(self):
         """Lookup table for intercept methods for each message type."""
         return {
-            "on-req": self.order_new_request
+            "on-req": self.order_new_request,
+            "oc-req": self.order_cancel_request,
         }
 
     def info_message(self, message, futures):
@@ -61,26 +63,26 @@ class InputResponseInterceptor:
             A dict of intercept_id's and future objects.
             dict{intercept_id, future_object}
         """
-        if message[2][6] != "SUCCESS":
-            order_cid = message[2][4][2]
-            future_id = f"on_{order_cid}"
-            try:
-                future = futures[future_id]
-                future.set_result({
-                    "status": message[2][6], # Error/Sucess
-                    "id": message[2][4][0],
-                    "cid": order_cid,
-                    "response": message[2][4],
-                    "comment": message[2][7]
-                })
-                return False
-            except KeyError:
-                return message
-        return message
+        order_cid = message[2][4][2]
+        future_id = f"on_{order_cid}"
+        try:
+            future = futures[future_id]
+            future.set_result({
+                "status": message[2][6], # Error/Sucess
+                "id": message[2][4][0],
+                "cid": order_cid,
+                "response": message[2][4],
+                "comment": message[2][7]
+            })
+            return False
+        except KeyError:
+            return message
 
     @staticmethod
-    def order_new_success(message, futures):
-        """Intercepts order new (on) messages and check for awaited futures.
+    def order_cancel_request(message, futures):
+        """Intercepts order new request info messages (on-req) and handles
+        potential request errors.
+
         If none are found it returns the message unchanged to be handled by the
         default auth callback.
 
@@ -91,19 +93,78 @@ class InputResponseInterceptor:
         futures : dict
             A dict of intercept_id's and future objects.
             dict{intercept_id, future_object}
-
         """
-        order_cid = message[2][2]
-        future_id = f"on_{order_cid}"
+        order_cid = message[2][4][2]
+        future_id = f"oc_{order_cid}"
         try:
             future = futures[future_id]
             future.set_result({
-                "status": "SUCCESS", # Error/Sucess
-                "id": message[2][0],
+                "status": message[2][6], # Error/Sucess
+                "id": message[2][4][0],
                 "cid": order_cid,
-                "response": message[2],
-                "comment": None
+                "response": message[2][4],
+                "comment": message[2][7]
             })
             return False
         except KeyError:
             return message
+
+    # @staticmethod
+    # def order_new_success(message, futures):
+    #     """Intercepts order new (on) messages and check for awaited futures.
+    #     If none are found it returns the message unchanged to be handled by the
+    #     default auth callback.
+    #
+    #     Parameters
+    #     ----------
+    #     message : str
+    #         The unaltered response message returned by bitfinex.
+    #     futures : dict
+    #         A dict of intercept_id's and future objects.
+    #         dict{intercept_id, future_object}
+    #
+    #     """
+    #     order_cid = message[2][2]
+    #     future_id = f"on_{order_cid}"
+    #     try:
+    #         future = futures[future_id]
+    #         future.set_result({
+    #             "status": "SUCCESS", # Error/Sucess
+    #             "id": message[2][0],
+    #             "cid": order_cid,
+    #             "response": message[2],
+    #             "comment": None
+    #         })
+    #         return False
+    #     except KeyError:
+    #         return message
+
+    # @staticmethod
+    # def order_cancel_success(message, futures):
+    #     """Intercepts order cancel (oc) messages and check for awaited futures.
+    #     If none are found it returns the message unchanged to be handled by the
+    #     default auth callback.
+    #
+    #     Parameters
+    #     ----------
+    #     message : str
+    #         The unaltered response message returned by bitfinex.
+    #     futures : dict
+    #         A dict of intercept_id's and future objects.
+    #         dict{intercept_id, future_object}
+    #
+    #     """
+    #     order_cid = message[2][2] or message[2][0] # uses id, if no cid given
+    #     future_id = f"oc_{order_cid}"
+    #     try:
+    #         future = futures[future_id]
+    #         future.set_result({
+    #             "status": "SUCCESS", # Error/Sucess
+    #             "id": message[2][0],
+    #             "cid": message[2][2],
+    #             "response": message[2],
+    #             "comment": None
+    #         })
+    #         return False
+    #     except KeyError:
+    #         return message
