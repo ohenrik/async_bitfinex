@@ -234,7 +234,7 @@ class WssClient():
         return channel_name
 
     # Precision: R0, P0, P1, P2, P3
-    async def subscribe_to_orderbook(self, symbol, precision, callback):
+    async def subscribe_to_orderbook(self, symbol, precision, length, callback):
         """Subscribe to the orderbook of a given symbol.
 
         Parameters
@@ -244,6 +244,9 @@ class WssClient():
 
         precision : str
             Accepted values as strings {R0, P0, P1, P2, P3}
+
+        length : integer
+            Accepted values are 25 and 100
 
         callback : func
             A function to use to handle incomming messages
@@ -270,10 +273,11 @@ class WssClient():
         symbol = utils.order_symbol(symbol)
         channel_name = "_".join(["order", symbol])
         data = {
-            'event': 'subscribe',
+            "event": 'subscribe',
             "channel": "book",
             "prec": precision,
-            'symbol': symbol,
+            "len": length,
+            "symbol": symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         await self.create_connection(channel_name, payload, callback)
