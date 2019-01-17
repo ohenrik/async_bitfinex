@@ -124,7 +124,7 @@ class FuturesHandler(MutableMapping):
             "oc": order_cancel_success,
             **(message_handlers if message_handlers else {})
         }
-        # TODO: Create logic to remove futures taht are Done or TimedOut
+        # TODO: Create logic to remove futures that are Done or Timed out
 
     def __call__(self, message):
         """Try to handle/intercept messages to set results for awaited

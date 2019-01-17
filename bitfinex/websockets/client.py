@@ -13,6 +13,19 @@ from .futures_handler import FuturesHandler
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
 
+class TimedFuture(asyncio.Future):
+
+    def __init__(self, timeout=None):
+        super().__init__()
+        if timeout:
+            asyncio.create_task(self.trigger_timeout(timeout))
+
+    async def trigger_timeout(self, timeout):
+        await asyncio.sleep(timeout)
+        if not self.done():
+            self.set_exception(TimeoutError)
+
+
 class WssClient():
     """Websocket client for bitfinex.
 
@@ -40,7 +53,6 @@ class WssClient():
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler()
-        self.timeout_seconds = 3
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -502,6 +514,9 @@ class WssClient():
 
         tif : datetime string
 
+        timeout : int
+            Seconds before future objects are timed out.
+
         Returns
         -------
         int
@@ -527,6 +542,7 @@ class WssClient():
             )
 
         """
+        timeout = kwargs.get("timeout")
         operation = self.new_order_op(
             order_type=order_type,
             symbol=symbol,
@@ -547,13 +563,13 @@ class WssClient():
             # TODO: Bitfinex does not return "on" for market orders.
             #       But instead returns "oc" with reason "Filled"
             confirmation_future_id = f"oc_{operation['cid']}"
-            self.futures[confirmation_future_id] = asyncio.Future()
+            self.futures[confirmation_future_id] = TimedFuture(timeout)
         else:
             confirmation_future_id = f"on_{operation['cid']}"
-            self.futures[confirmation_future_id] = asyncio.Future()
+            self.futures[confirmation_future_id] = TimedFuture(timeout)
 
         request_future_id = f"on-req_{operation['cid']}"
-        self.futures[request_future_id] = asyncio.Future()
+        self.futures[request_future_id] = TimedFuture(timeout)
 
         asyncio.create_task(self.connections["auth"].send(payload))
         return {
@@ -620,7 +636,7 @@ class WssClient():
         await self.connections["auth"].send(payload)
         return [order[1].get("cid", None) for order in operations]
 
-    def cancel_order(self, order_id=None, order_cid=None, order_date=None):
+    def cancel_order(self, order_id=None, order_cid=None, order_date=None, timeout=None):
         """Cancel order using either the id (order_id) or the client id (order_cid).
 
         Parameters
@@ -631,6 +647,8 @@ class WssClient():
             cid string. e.g. "1234154"
         order_date : str
             Iso formated order date. e.g. "2012-01-23"
+        timeout : int
+            Seconds before future objects are timed out.
 
         Example
         -------
@@ -674,8 +692,8 @@ class WssClient():
         request_future_id = f"oc-req_{order_id or order_cid}"
         confirmation_future_id = f"oc_{order_id or order_cid}"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[request_future_id] = asyncio.Future()
-        self.futures[confirmation_future_id] = asyncio.Future()
+        self.futures[request_future_id] = TimedFuture(timeout)
+        self.futures[confirmation_future_id] = TimedFuture(timeout)
         asyncio.create_task(self.connections["auth"].send(payload))
         return {
             "req_id": request_future_id,
@@ -685,7 +703,7 @@ class WssClient():
             "cid_date": order_date
         }
 
-    async def update_order(self, **order_settings):
+    async def update_order(self, timeout=None, **order_settings):
         """Update order using the order id
 
         Parameters
@@ -721,12 +739,11 @@ class WssClient():
             order_settings
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        # Create a future method for handling responses
-        self.futures[order_settings["id"]] = asyncio.Future()
+        # TODO: Change this to follow new_order pattern
+        future_id = f"ou_{order_settings['id']}"
+        self.futures[future_id] = TimedFuture(timeout)
         await self.connections["auth"].send(payload)
-        # Wait for order confirmation or error, then return the response with the
-        # cid of the order.
-        await self.futures[order_settings["id"]]
+        await self.futures[future_id]
 
     async def calc(self, *calculations):
         """

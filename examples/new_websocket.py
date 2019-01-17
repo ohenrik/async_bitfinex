@@ -26,7 +26,8 @@ async def cancel_order(client, cid):
     await asyncio.sleep(3)
     handles = client.cancel_order(
         # id=_id # Can use either id, or cid (+cid_date)
-        order_cid=cid
+        order_cid=cid,
+        timeout=3
     )
     cancel_req_response = await client.futures[handles["req_id"]]
     print("Cancel Request response Received")
@@ -35,13 +36,7 @@ async def cancel_order(client, cid):
     cancel_conirm = await client.futures[handles["confirm_id"]]
     print("Cancel Confirm response Received")
     print(cancel_conirm)
-    # If an order is not active it will not thow an error with any id or cid.
-    # This means that the best/only way to pick up errors is to
-    # timeout the future object. Se example bellow
-    #     await asyncio.wait_for(
-    #         client.futures[handles["req_id"]],
-    #         timeout=self.timeout_seconds
-    #     )
+
 
 async def main():
     client = WssClient(
@@ -53,6 +48,14 @@ async def main():
     order_response = await create_order(client)
     # pylint: disable=W0612
     await cancel_order(client, order_response["cid"])
+
+    # If an order is not active it will not thow an error with any id or cid.
+    # This means that the best/only way to pick up errors is to
+    # try:
+    #     await asyncio.sleep(2)
+    #     await cancel_order(client, order_response["cid"])
+    # except TimeoutError:
+    #     print("TIME OUT ERROR!")
 
 
 if __name__ == '__main__':
