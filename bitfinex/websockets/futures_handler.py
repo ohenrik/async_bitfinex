@@ -37,12 +37,12 @@ def order_cancel_request(message, futures):
         A dict of intercept_id's and future objects.
         dict{intercept_id, future_object}
     """
-    order_cid = message[4][2]
+    order_cid = message[4][2] or message[4][0]
     future_id = f"oc-req_{order_cid}"
     futures[future_id].set_result({
         "status": message[6], # Error/Sucess
         "id": message[4][0],
-        "cid": order_cid,
+        "cid": message[4][2],
         "response": message[4],
         "comment": message[7]
     })
