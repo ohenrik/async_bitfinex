@@ -1,6 +1,5 @@
 """Module for logic related to intercepting input responses over the bitfinex
 auth channel"""
-import asyncio
 from collections.abc import MutableMapping
 
 def order_new_request(message, futures):
