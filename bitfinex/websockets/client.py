@@ -1,6 +1,5 @@
+"""Websocket Client for Bitfinex V2 API."""
 # coding=utf-8
-# from datetime import datetime
-# from concurrent.futures import TimeoutError
 import json
 import hmac
 import hashlib
