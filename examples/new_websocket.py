@@ -29,13 +29,23 @@ async def cancel_order(client, cid):
         order_cid=cid,
         timeout=10
     )
-    cancel_req_response = await client.futures[handles["req_id"]]
-    print("Cancel Request response Received")
-    print(cancel_req_response)
+    try:
+        cancel_req_response = await client.futures[handles["req_id"]]
+        print("Cancel Request response Received")
+        print(cancel_req_response)
 
-    cancel_confirm = await client.futures[handles["confirm_id"]]
-    print("Cancel Confirm response Received")
-    print(cancel_confirm)
+        cancel_confirm = await client.futures[handles["confirm_id"]]
+        print("Cancel Confirm response Received")
+        print(cancel_confirm)
+    except TimeoutError:
+        # If an order is not active it will not thow an error with any id or cid.
+        # This means that the best/only way to pick up errors is to
+        # catch a TimeoutError
+        print(
+            "Cancel Order timed out. This can happen if the order was "
+            "already canceled, excuted or never existed."
+        )
+
 
 
 async def main():
@@ -49,13 +59,6 @@ async def main():
     # pylint: disable=W0612
     await cancel_order(client, order_response["cid"])
 
-    # If an order is not active it will not thow an error with any id or cid.
-    # This means that the best/only way to pick up errors is to
-    # try:
-    #     await asyncio.sleep(2)
-    #     await cancel_order(client, order_response["cid"])
-    # except TimeoutError:
-    #     print("TIME OUT ERROR!")
 
 
 if __name__ == '__main__':
