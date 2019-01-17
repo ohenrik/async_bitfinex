@@ -2,10 +2,6 @@ import os
 import asyncio
 from bitfinex import WssClient
 
-async def async_print(message):
-    """Helper just to print messages async"""
-    print(message)
-
 async def create_order(client):
     await asyncio.sleep(3)
     handles = client.new_order(
@@ -32,10 +28,13 @@ async def cancel_order(client, cid):
         # id=_id # Can use either id, or cid (+cid_date)
         order_cid=cid
     )
+    cancel_req_response = await client.futures[handles["req_id"]]
     print("Cancel Request response Received")
-    print(await client.futures[handles["req_id"]])
+    print(cancel_req_response)
+
+    cancel_conirm = await client.futures[handles["confirm_id"]]
     print("Cancel Confirm response Received")
-    print(await client.futures[handles["confirm_id"]])
+    print(cancel_conirm)
     # If an order is not active it will not thow an error with any id or cid.
     # This means that the best/only way to pick up errors is to
     # timeout the future object. Se example bellow

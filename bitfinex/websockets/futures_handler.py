@@ -161,7 +161,7 @@ class FuturesHandler(MutableMapping):
         return len(self.futures)
 
     @staticmethod
-    def get_message_type(message):
+    def _get_message_type(message):
         if isinstance(message, list):
             message = message[2] if message[1] == "n" else message
             # message[1] <-- message type str, e.g. "on" (successfull new order)
@@ -169,8 +169,3 @@ class FuturesHandler(MutableMapping):
         else:
             message_type = message["event"]
         return message_type, message
-
-    @property
-    def message_types(self):
-        """Lookup table for intercept methods for each message type."""
-        return self._message_handlers
