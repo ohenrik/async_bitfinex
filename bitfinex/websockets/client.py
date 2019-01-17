@@ -9,7 +9,7 @@ import websockets
 
 from bitfinex import utils
 from . import abbreviations
-from . input_response_intercept import InputResponseInterceptor
+from .futures_handler import FuturesHandler
 
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
@@ -40,9 +40,8 @@ class WssClient():
         self.secret = secret
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
-        self.futures = {}
+        self.futures = FuturesHandler()
         self.timeout_seconds = 3
-        self.input_interceptor = InputResponseInterceptor()
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -90,13 +89,11 @@ class WssClient():
             self.connections[channel_name] = websocket
             async for message in self.connections[channel_name]:
                 message = json.loads(message)
-                if isinstance(message, list):
-                    message = self.input_interceptor(message, self.futures)
-                if message:
-                    if asyncio.iscoroutinefunction(callback):
-                        await callback(message)
-                    else:
-                        callback(message)
+                self.futures(message)
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(message)
+                else:
+                    callback(message)
 
     async def authenticate(self, callback, filters=None):
         """Method used to create an authenticated channel that both recieves
@@ -329,13 +326,14 @@ class WssClient():
 
         """
 
+        timeframe = timeframe or '1m'
+
         valid_tfs = ['1m', '5m', '15m', '30m', '1h', '3h', '6h', '12h', '1D',
                      '7D', '14D', '1M']
-        if timeframe:
-            if timeframe not in valid_tfs:
-                raise ValueError("timeframe must be any of %s" % valid_tfs)
-        else:
-            timeframe = '1m'
+
+        if timeframe not in valid_tfs:
+            raise ValueError("timeframe must be any of %s" % valid_tfs)
+
         identifier = ('candles', symbol, timeframe)
         channel_name = "_".join(identifier)
         symbol = utils.order_symbol(symbol)
@@ -367,9 +365,8 @@ class WssClient():
         await self.connections[channel].send(payload)
         return client_cid
 
-    def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
-                     price_aux_limit=None, price_oco_stop=None, hidden=0,
-                     flags=None, tif=None):
+    @staticmethod
+    def new_order_op(order_type, symbol, amount, price, **kwargs):
         """Create new order operation
 
         Parameters
@@ -441,7 +438,6 @@ class WssClient():
             )
 
         """
-        flags = flags or []
         client_order_id = utils.create_cid()
         order_op = {
             'cid': client_order_id,
@@ -449,26 +445,25 @@ class WssClient():
             'symbol': utils.order_symbol(symbol),
             'amount': amount,
             'price': price,
-            'hidden': hidden,
-            "flags": sum(flags),
+            'hidden': kwargs.get("hidden", 0),
+            "flags": sum(kwargs.get("flags", [])),
         }
-        if price_trailing:
-            order_op['price_trailing'] = price_trailing
 
-        if price_aux_limit:
-            order_op['price_aux_limit'] = price_aux_limit
+        if kwargs.get("price_trailing"):
+            order_op['price_trailing'] = kwargs.get("price_trailing")
 
-        if price_oco_stop:
-            order_op['price_oco_stop'] = price_oco_stop
+        if kwargs.get("price_aux_limit"):
+            order_op['price_aux_limit'] = kwargs.get("price_aux_limit")
 
-        if tif:
-            order_op['tif'] = tif
+        if kwargs.get("price_oco_stop"):
+            order_op['price_oco_stop'] = kwargs.get("price_oco_stop")
+
+        if kwargs.get("tif"):
+            order_op['tif'] = kwargs.get("tif")
 
         return order_op
 
-    async def new_order(self, order_type, symbol, amount, price, price_trailing=None,
-                  price_aux_limit=None, price_oco_stop=None, hidden=0,
-                  flags=None, tif=None):
+    def new_order(self, order_type, symbol, amount, price, **kwargs):
         """
         Create new order.
 
@@ -538,12 +533,7 @@ class WssClient():
             symbol=symbol,
             amount=amount,
             price=price,
-            price_trailing=price_trailing,
-            price_aux_limit=price_aux_limit,
-            price_oco_stop=price_oco_stop,
-            hidden=hidden,
-            flags=flags,
-            tif=tif
+            **kwargs
         )
         data = [
             0,
@@ -553,15 +543,25 @@ class WssClient():
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         # Create a future method for handling responses
-        future_id = f"on_{operation['cid']}"
-        self.futures[future_id] = asyncio.Future()
-        await self.connections["auth"].send(payload)
-        # Wait for order confirmation or error, then return the response with the
-        # cid of the order.
-        return await asyncio.wait_for(
-            self.futures[future_id],
-            timeout=self.timeout_seconds
-        )
+        confirmation_future_id = None
+        if order_type in ("MARKET", "EXCHANGE MARKET"):
+            # TODO: Bitfinex does not return "on" for market orders.
+            #       But instead returns "oc" with reason "Filled"
+            confirmation_future_id = f"oc_{operation['cid']}"
+            self.futures[confirmation_future_id] = asyncio.Future()
+        else:
+            confirmation_future_id = f"on_{operation['cid']}"
+            self.futures[confirmation_future_id] = asyncio.Future()
+
+        request_future_id = f"on-req_{operation['cid']}"
+        self.futures[request_future_id] = asyncio.Future()
+
+        asyncio.create_task(self.connections["auth"].send(payload))
+        return {
+            "req_id": request_future_id,
+            "confirm_id": confirmation_future_id,
+            "cid": operation['cid']
+        }
 
     async def multi_order(self, operations):
         """Multi order operation.
@@ -621,7 +621,7 @@ class WssClient():
         await self.connections["auth"].send(payload)
         return [order[1].get("cid", None) for order in operations]
 
-    async def cancel_order(self, order_id=None, order_cid=None, order_date=None):
+    def cancel_order(self, order_id=None, order_cid=None, order_date=None):
         """Cancel order using either the id (order_id) or the client id (order_cid).
 
         Parameters
@@ -672,25 +672,19 @@ class WssClient():
             None,
             cancel_message
         ]
-        future_id = f"oc_{order_id or order_cid}"
+        request_future_id = f"oc-req_{order_id or order_cid}"
+        confirmation_future_id = f"oc_{order_id or order_cid}"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[future_id] = asyncio.Future()
-        await self.connections["auth"].send(payload)
-        # Wait for order confirmation or error, then return the response with the
-        # cid of the order.
-        try:
-            return await asyncio.wait_for(
-                self.futures[future_id],
-                timeout=self.timeout_seconds
-            )
-        except TimeoutError:
-            return {
-                "status": "ERROR",
-                "cid": order_cid,
-                "id": order_id,
-                "message": None,
-                "comment": "TimeoutError was raised. No order found or no response."
-            }
+        self.futures[request_future_id] = asyncio.Future()
+        self.futures[confirmation_future_id] = asyncio.Future()
+        asyncio.create_task(self.connections["auth"].send(payload))
+        return {
+            "req_id": request_future_id,
+            "confirm_id": confirmation_future_id,
+            "id": order_id,
+            "cid": order_cid,
+            "cid_date": order_date
+        }
 
     async def update_order(self, **order_settings):
         """Update order using the order id
