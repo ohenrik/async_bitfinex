@@ -19,7 +19,7 @@ class InputResponseInterceptor:
         try:
             # message[1] <-- message type str, e.g. "on" (successfull new order)
             return self.message_types[message[1]](message, futures)
-        except KeyError:
+        except (KeyError, TypeError):
             return message
 
     @property
