@@ -3,11 +3,8 @@ auth channel"""
 from collections.abc import MutableMapping
 
 def order_new_request(message, futures):
-    """Intercepts order new request info messages (on-req) and handles
-    potential request errors.
-
-    If none are found it returns the message unchanged to be handled by the
-    default auth callback.
+    """Intercepts order new request info messages (on-req) and check for
+    Future objets with a matching cid.
 
     Parameters
     ----------
@@ -29,11 +26,8 @@ def order_new_request(message, futures):
     del futures[future_id]
 
 def order_cancel_request(message, futures):
-    """Intercepts order new request info messages (on-req) and handles
-    potential request errors.
-
-    If none are found it returns the message unchanged to be handled by the
-    default auth callback.
+    """Intercepts order cancel request info messages (on-req) and check for
+    Future objets with a matching cid.
 
     Parameters
     ----------
@@ -56,9 +50,8 @@ def order_cancel_request(message, futures):
 
 
 def order_new_success(message, futures):
-    """Intercepts order new (on) messages and check for awaited futures.
-    If none are found it returns the message unchanged to be handled by the
-    default auth callback.
+    """Intercepts order new (on) messages and check for Future objets with
+    a matching cid.
 
     Parameters
     ----------
@@ -82,9 +75,8 @@ def order_new_success(message, futures):
     del futures[future_id]
 
 def order_cancel_success(message, futures):
-    """Intercepts order cancel (oc) messages and check for awaited futures.
-    If none are found it returns the message unchanged to be handled by the
-    default auth callback.
+    """Intercepts order cancel messages (oc) and check for
+    Future objets with a matching cid.
 
     Parameters
     ----------
@@ -110,10 +102,19 @@ def order_cancel_success(message, futures):
 
 
 class FuturesHandler(MutableMapping):
+    """Handles Future objects and sets results when matching
+    responses are found.
 
-    def __init__(self, timeout_seconds=10, message_handlers=None):
+    Parameters
+    ----------
+    message_handlers : dict
+        A dictionary containing message handle functions used to react to
+        incomming responses (messages) and set the result of Future objects.
+        Se `order_new_request` above as example.
+    """
+
+    def __init__(self, message_handlers=None):
         self.futures = {}
-        self.timeout_seconds = timeout_seconds
         self._message_handlers = {
             # "n": self.info_message,
             "on-req": order_new_request,
@@ -138,8 +139,8 @@ class FuturesHandler(MutableMapping):
             dict{intercept_id, future_object}
         """
         try:
-            message_type, message = self.get_message_type(message)
-            return self.message_types[message_type](message, self.futures)
+            message_type, message = self._get_message_type(message)
+            return self._message_handlers[message_type](message, self.futures)
         except (KeyError, TypeError):
             pass
 
