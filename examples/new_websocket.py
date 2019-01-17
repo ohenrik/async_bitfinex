@@ -27,15 +27,15 @@ async def cancel_order(client, cid):
     handles = client.cancel_order(
         # id=_id # Can use either id, or cid (+cid_date)
         order_cid=cid,
-        timeout=3
+        timeout=10
     )
     cancel_req_response = await client.futures[handles["req_id"]]
     print("Cancel Request response Received")
     print(cancel_req_response)
 
-    cancel_conirm = await client.futures[handles["confirm_id"]]
+    cancel_confirm = await client.futures[handles["confirm_id"]]
     print("Cancel Confirm response Received")
-    print(cancel_conirm)
+    print(cancel_confirm)
 
 
 async def main():
