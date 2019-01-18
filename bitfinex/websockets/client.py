@@ -18,7 +18,7 @@ class TimedFuture(asyncio.Future):
     def __init__(self, timeout=None):
         super().__init__()
         if timeout:
-            asyncio.create_task(self.trigger_timeout(timeout))
+            asyncio.ensure_future(self.trigger_timeout(timeout))
 
     async def trigger_timeout(self, timeout):
         await asyncio.sleep(timeout)
@@ -571,7 +571,7 @@ class WssClient():
         request_future_id = f"on-req_{operation['cid']}"
         self.futures[request_future_id] = TimedFuture(timeout)
 
-        asyncio.create_task(self.connections["auth"].send(payload))
+        asyncio.ensure_future(self.connections["auth"].send(payload))
         return {
             "req_id": request_future_id,
             "confirm_id": confirmation_future_id,
@@ -694,7 +694,7 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.futures[request_future_id] = TimedFuture(timeout)
         self.futures[confirmation_future_id] = TimedFuture(timeout)
-        asyncio.create_task(self.connections["auth"].send(payload))
+        asyncio.ensure_future(self.connections["auth"].send(payload))
         return {
             "req_id": request_future_id,
             "confirm_id": confirmation_future_id,
