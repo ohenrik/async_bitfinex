@@ -46,13 +46,14 @@ class WssClient():
 
     """
 
-    def __init__(self, key=None, secret=None, nonce_multiplier=10000.0):  # client
+    def __init__(self, key=None, secret=None, nonce_multiplier=10000.0, loop=None):  # client
         super().__init__()
         self.key = key
         self.secret = secret
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler()
+        self.loop = loop or asyncio.get_event_loop()
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -106,7 +107,7 @@ class WssClient():
                 else:
                     callback(message)
 
-    async def authenticate(self, callback, filters=None):
+    def authenticate(self, callback, filters=None, timeout=None):
         """Method used to create an authenticated channel that both recieves
         account spesific messages and is used to send account spesific messages.
         So in order to be able to use the new_order method, you have to
@@ -157,11 +158,14 @@ class WssClient():
         }
         if filters:
             data['filter'] = filters
+        self.futures["auth"] = TimedFuture(timeout)
+        self.futures["auth"].future_id = "auth"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.create_connection("auth", payload, callback)
+        asyncio.ensure_future(self.create_connection("auth", payload, callback))
+        return self.futures["auth"]
 
 
-    async def subscribe_to_ticker(self, symbol, callback):
+    def subscribe_to_ticker(self, symbol, callback, timeout=None):
         """Subscribe to the passed symbol ticks data channel.
 
         Parameters
@@ -197,11 +201,13 @@ class WssClient():
             'channel': 'ticker',
             'symbol': symbol,
         }
+        self.futures[channel_name] = TimedFuture(timeout)
+        self.futures[channel_name].future_id = channel_name
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.create_connection(channel_name, payload, callback)
-        return channel_name
+        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
+        return self.futures[channel_name]
 
-    async def subscribe_to_trades(self, symbol, callback):
+    def subscribe_to_trades(self, symbol, callback, timeout=None):
         """Subscribe to the passed symbol trades data channel.
 
         Parameters
@@ -211,6 +217,15 @@ class WssClient():
 
         callback : func
             A function to use to handle incomming messages
+
+        timeout : int
+            Seconds before subcribe request response future times out
+
+        Returns
+        -------
+        str
+            future id of subscribe request response
+
 
         Example
         -------
@@ -238,11 +253,13 @@ class WssClient():
             'symbol': symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.create_connection(channel_name, payload, callback)
-        return channel_name
+        self.futures[channel_name] = TimedFuture(timeout)
+        self.futures[channel_name].future_id = channel_name
+        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
+        return self.futures[channel_name]
 
     # Precision: R0, P0, P1, P2, P3
-    async def subscribe_to_orderbook(self, symbol, precision, length, callback):
+    def subscribe_to_orderbook(self, symbol, precision, length, callback, timeout=None):
         """Subscribe to the orderbook of a given symbol.
 
         Parameters
@@ -279,7 +296,7 @@ class WssClient():
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        channel_name = "_".join(["order", symbol])
+        channel_name = "_".join(["book", symbol])
         data = {
             "event": 'subscribe',
             "channel": "book",
@@ -288,10 +305,12 @@ class WssClient():
             "symbol": symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.create_connection(channel_name, payload, callback)
-        return channel_name
+        self.futures[channel_name] = TimedFuture(timeout)
+        self.futures[channel_name].future_id = channel_name
+        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
+        return self.futures[channel_name]
 
-    async def subscribe_to_candles(self, symbol, timeframe, callback):
+    def subscribe_to_candles(self, symbol, timeframe, callback, timeout=None):
         """Subscribe to the passed symbol's OHLC data channel.
 
         Parameters
@@ -345,18 +364,20 @@ class WssClient():
         if timeframe not in valid_tfs:
             raise ValueError("timeframe must be any of %s" % valid_tfs)
 
-        identifier = ('candles', symbol, timeframe)
-        channel_name = "_".join(identifier)
         symbol = utils.order_symbol(symbol)
         key = 'trade:' + timeframe + ':' + symbol
+        identifier = ('candles', key)
+        channel_name = "_".join(identifier)
         data = {
             'event': 'subscribe',
             'channel': 'candles',
             'key': key,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.create_connection(channel_name, payload, callback)
-        return channel_name
+        self.futures[channel_name] = TimedFuture(timeout)
+        self.futures[channel_name].future_id = channel_name
+        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
+        return self.futures[channel_name]
 
     def ping(self, channel="auth", timeout=None):
         """Ping bitfinex.
@@ -375,8 +396,9 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         pong_future_id = f"pong_{client_cid}"
         self.futures[pong_future_id] = TimedFuture(timeout)
+        self.futures[pong_future_id].future_id = pong_future_id
         asyncio.get_event_loop().create_task(self.connections[channel].send(payload))
-        return pong_future_id
+        return self.futures[pong_future_id]
 
     @staticmethod
     def new_order_op(order_type, symbol, amount, price, **kwargs):
@@ -560,23 +582,22 @@ class WssClient():
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         # Create a future method for handling responses
-        confirmation_future_id = None
+        confirm_future_id = None
         if order_type in ("MARKET", "EXCHANGE MARKET"):
-            # TODO: Bitfinex does not return "on" for market orders.
-            #       But instead returns "oc" with reason "Filled"
-            confirmation_future_id = f"oc_{operation['cid']}"
-            self.futures[confirmation_future_id] = TimedFuture(timeout)
+            confirm_future_id = f"oc_{operation['cid']}"
+            self.futures[confirm_future_id] = TimedFuture(timeout)
         else:
-            confirmation_future_id = f"on_{operation['cid']}"
-            self.futures[confirmation_future_id] = TimedFuture(timeout)
+            confirm_future_id = f"on_{operation['cid']}"
+            self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
 
         request_future_id = f"on-req_{operation['cid']}"
         self.futures[request_future_id] = TimedFuture(timeout)
-
-        asyncio.ensure_future(self.connections["auth"].send(payload))
+        self.futures[request_future_id].future_id = request_future_id
+        self.loop.create_task(self.connections["auth"].send(payload))
         return {
-            "req_id": request_future_id,
-            "confirm_id": confirmation_future_id,
+            "request_future": self.futures[request_future_id],
+            "confirm_future": self.futures[confirm_future_id],
             "cid": operation['cid']
         }
 
@@ -692,20 +713,25 @@ class WssClient():
             cancel_message
         ]
         request_future_id = f"oc-req_{order_id or order_cid}"
-        confirmation_future_id = f"oc_{order_id or order_cid}"
+        confirm_future_id = f"oc_{order_id or order_cid}"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+
         self.futures[request_future_id] = TimedFuture(timeout)
-        self.futures[confirmation_future_id] = TimedFuture(timeout)
-        asyncio.ensure_future(self.connections["auth"].send(payload))
+        self.futures[request_future_id].future_id = request_future_id
+
+        self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
+
+        self.loop.create_task(self.connections["auth"].send(payload))
         return {
-            "req_id": request_future_id,
-            "confirm_id": confirmation_future_id,
+            "request_future": self.futures[request_future_id],
+            "confirm_future": self.futures[confirm_future_id],
             "id": order_id,
             "cid": order_cid,
             "cid_date": order_date
         }
 
-    async def update_order(self, timeout=None, **order_settings):
+    def update_order(self, timeout=None, **order_settings):
         """Update order using the order id
 
         Parameters
@@ -741,13 +767,23 @@ class WssClient():
             order_settings
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        # TODO: Change this to follow new_order pattern
-        future_id = f"ou_{order_settings['id']}"
-        self.futures[future_id] = TimedFuture(timeout)
-        await self.connections["auth"].send(payload)
-        await self.futures[future_id]
 
-    async def calc(self, *calculations):
+        request_future_id = f"ou-req_{order_settings['id']}"
+        confirm_future_id = f"ou_{order_settings['id']}"
+        self.futures[request_future_id] = TimedFuture(timeout)
+        self.futures[request_future_id].future_id = request_future_id
+
+        self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
+
+        self.loop.create_task(self.connections["auth"].send(payload))
+        return {
+            "request_future": self.futures[request_future_id],
+            "confirm_future": self.futures[confirm_future_id],
+            "id": order_settings['id']
+        }
+
+    def calc(self, *calculations):
         """
         This message will be used by clients to trigger specific calculations,
         so we don't end up in calculating data that is not usually needed.
@@ -806,4 +842,4 @@ class WssClient():
             calculations
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.connections["auth"].send(payload)
+        self.loop.create_task(self.connections["auth"].send(payload))
