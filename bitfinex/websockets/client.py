@@ -358,7 +358,7 @@ class WssClient():
         await self.create_connection(channel_name, payload, callback)
         return channel_name
 
-    async def ping(self, channel="auth"):
+    def ping(self, channel="auth", timeout=None):
         """Ping bitfinex.
 
         Parameters
@@ -373,8 +373,10 @@ class WssClient():
             'cid': client_cid
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        await self.connections[channel].send(payload)
-        return client_cid
+        pong_future_id = f"pong_{client_cid}"
+        self.futures[pong_future_id] = TimedFuture(timeout)
+        asyncio.get_event_loop().create_task(self.connections[channel].send(payload))
+        return pong_future_id
 
     @staticmethod
     def new_order_op(order_type, symbol, amount, price, **kwargs):

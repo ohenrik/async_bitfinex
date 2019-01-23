@@ -2,6 +2,23 @@
 auth channel"""
 from collections.abc import MutableMapping
 
+def pong_handler(message, futures):
+    """Intercepts order new request info messages (on-req) and check for
+    Future objets with a matching cid.
+
+    Parameters
+    ----------
+    message : str
+        The unaltered response message returned by bitfinex.
+    futures : dict
+        A dict of intercept_id's and future objects.
+        dict{intercept_id, future_object}
+    """
+    order_cid = message["cid"]
+    future_id = f"pong_{order_cid}"
+    futures[future_id].set_result(message)
+    del futures[future_id]
+
 def order_new_request(message, futures):
     """Intercepts order new request info messages (on-req) and check for
     Future objets with a matching cid.
@@ -120,6 +137,7 @@ class FuturesHandler(MutableMapping):
             "on-req": order_new_request,
             "oc-req": order_cancel_request,
             # "auth": self.auth_event,
+            "pong": pong_handler,
             "on": order_new_success,
             "oc": order_cancel_success,
             **(message_handlers if message_handlers else {})
