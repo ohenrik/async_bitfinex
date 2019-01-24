@@ -8,7 +8,7 @@ import websockets
 
 from bitfinex import utils
 from . import abbreviations
-from .futures_handler import FuturesHandler
+from .futures_handler import FuturesHandler, CLIENT_HANDLERS
 
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
@@ -52,7 +52,7 @@ class WssClient():
         self.secret = secret
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
-        self.futures = FuturesHandler()
+        self.futures = FuturesHandler(CLIENT_HANDLERS)
         self.loop = loop or asyncio.get_event_loop()
 
     def _nonce(self):

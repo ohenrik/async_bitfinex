@@ -205,6 +205,20 @@ def auth_confirmation(message, futures):
     future.set_result(message)
     del futures["auth"]
 
+CLIENT_HANDLERS = {
+    "subscribed": subscription_confirmations,
+    "auth": auth_confirmation,
+    "error": subscription_confirmations,
+    "on-req": order_new_request,
+    "ou-req": order_update_request,
+    "oc-req": order_cancel_request,
+    "pong": pong_handler,
+    "on": order_new_success,
+    "ou": order_update_success,
+    "oc": order_cancel_success,
+    # **(message_handlers if message_handlers else {})
+}
+
 class FuturesHandler(MutableMapping):
     """Handles Future objects and sets results when matching
     responses are found.
@@ -219,21 +233,7 @@ class FuturesHandler(MutableMapping):
 
     def __init__(self, message_handlers=None, futures_cleanup_interval=10):
         self.futures = {}
-        self._message_handlers = {
-            # "n": self.info_message,
-            "subscribed": subscription_confirmations,
-            "auth": auth_confirmation,
-            "error": subscription_confirmations,
-            "on-req": order_new_request,
-            "ou-req": order_update_request,
-            "oc-req": order_cancel_request,
-            # "auth": self.auth_event,
-            "pong": pong_handler,
-            "on": order_new_success,
-            "ou": order_update_success,
-            "oc": order_cancel_success,
-            **(message_handlers if message_handlers else {})
-        }
+        self._message_handlers = message_handlers
         self.futures_cleanup_interval = futures_cleanup_interval
         asyncio.get_event_loop().create_task(self.clear_expired_futures())
 
