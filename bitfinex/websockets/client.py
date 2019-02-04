@@ -62,7 +62,7 @@ class WssClient():
         need to increase the nonce_multiplier."""
         return str(utils.get_nonce(self.nonce_multiplier))
 
-    async def stop_channel(self, connection_name):
+    def stop_channel(self, connection_name):
         """Closes one spesific webscoket connection by name
 
         Parameters
@@ -71,12 +71,12 @@ class WssClient():
             the name of the websocket connection to close.
         """
         print(f"Stopping: {connection_name}")
-        await self.connections[connection_name].close()
+        asyncio.ensure_future(self.connections[connection_name].close())
 
-    async def stop_all(self):
+    def stop_all(self):
         """Closes all webscoket connections"""
         for connection_name in self.connections:
-            await self.stop_channel(connection_name)
+            self.stop_channel(connection_name)
 
     async def create_connection(self, channel_name, payload, callback):
         """Create a new websocket connection, store the connection and
