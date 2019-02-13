@@ -140,7 +140,7 @@ class Client:
 
         return '&'.join(["%s=%s" % (k, parameters[k]) for k in keys])
 
-    def account_info(self):
+    def account_infos(self):
         """`Return information about your account (trading fees)
         <https://docs.bitfinex.com/reference#rest-auth-account-info>`_
 
