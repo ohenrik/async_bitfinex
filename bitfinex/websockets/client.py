@@ -46,7 +46,7 @@ class WssClient():
 
     """
 
-    def __init__(self, key=None, secret=None, nonce_multiplier=10000.0, loop=None):  # client
+    def __init__(self, key=None, secret=None, nonce_multiplier=1.0, loop=None):  # client
         super().__init__()
         self.key = key
         self.secret = secret
