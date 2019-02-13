@@ -498,6 +498,22 @@ class WssClient():
 
         return order_op
 
+    def _create_new_order_future(self, cid, order_type, timeout=None):
+        """Create future objects for new orders"""
+        confirm_future_id = None
+        if order_type in ("MARKET", "EXCHANGE MARKET"):
+            confirm_future_id = f"oc_{cid}"
+            self.futures[confirm_future_id] = TimedFuture(timeout)
+        else:
+            confirm_future_id = f"on_{cid}"
+            self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
+
+        request_future_id = f"on-req_{cid}"
+        self.futures[request_future_id] = TimedFuture(timeout)
+        self.futures[request_future_id].future_id = request_future_id
+        return (self.futures[request_future_id], self.futures[confirm_future_id])
+
     def new_order(self, order_type, symbol, amount, price, **kwargs):
         """
         Create new order.
@@ -566,7 +582,6 @@ class WssClient():
             )
 
         """
-        timeout = kwargs.get("timeout")
         operation = self.new_order_op(
             order_type=order_type,
             symbol=symbol,
@@ -582,22 +597,15 @@ class WssClient():
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         # Create a future method for handling responses
-        confirm_future_id = None
-        if order_type in ("MARKET", "EXCHANGE MARKET"):
-            confirm_future_id = f"oc_{operation['cid']}"
-            self.futures[confirm_future_id] = TimedFuture(timeout)
-        else:
-            confirm_future_id = f"on_{operation['cid']}"
-            self.futures[confirm_future_id] = TimedFuture(timeout)
-        self.futures[confirm_future_id].future_id = confirm_future_id
-
-        request_future_id = f"on-req_{operation['cid']}"
-        self.futures[request_future_id] = TimedFuture(timeout)
-        self.futures[request_future_id].future_id = request_future_id
+        request_future, confirm_future = self._create_new_order_future(
+            cid=operation["cid"],
+            order_type=order_type,
+            timeout=kwargs.get("timeout")
+        )
         self.loop.create_task(self.connections["auth"].send(payload))
         return {
-            "request_future": self.futures[request_future_id],
-            "confirm_future": self.futures[confirm_future_id],
+            "request_future": request_future,
+            "confirm_future": confirm_future,
             "cid": operation['cid']
         }
 
