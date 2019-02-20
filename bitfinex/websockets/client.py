@@ -473,7 +473,7 @@ class WssClient():
             )
 
         """
-        client_order_id = utils.create_cid()
+        client_order_id = kwargs.get("cid", utils.create_cid())
         order_op = {
             'cid': client_order_id,
             'type': order_type,
