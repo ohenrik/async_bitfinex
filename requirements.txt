@@ -8,14 +8,10 @@ nose-cov
 sniffer
 Quandl
 python-decouple
-pandas
-twisted
-autobahn
-pyopenssl
-service_identity
 pytest
 requests_mock
 Sphinx
 nbsphinx
 sphinx_rtd_theme
 sphinxcontrib-napoleon
+websockets

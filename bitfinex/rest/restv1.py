@@ -123,7 +123,7 @@ class Client:
         response = requests.post(url, headers=signed_payload, verify=verify)
         if response.status_code == 200:
             return response.json()
-        elif response.status_code == 400:
+        elif response.status_code >= 400:
             return response.json()
         else:
             try:
@@ -139,6 +139,128 @@ class Client:
         keys.sort()
 
         return '&'.join(["%s=%s" % (k, parameters[k]) for k in keys])
+
+    def account_infos(self):
+        """`Return information about your account (trading fees)
+        <https://docs.bitfinex.com/reference#rest-auth-account-info>`_
+
+        Return information about your account (trading fees)
+
+        Returns
+        -------
+        list
+             ::
+
+                [{
+                  "maker_fees":"0.1",
+                  "taker_fees":"0.2",
+                  "fees":[{
+                    "pairs":"BTC",
+                    "maker_fees":"0.1",
+                    "taker_fees":"0.2"
+                   },{
+                    "pairs":"LTC",
+                    "maker_fees":"0.1",
+                    "taker_fees":"0.2"
+                   },
+                   {
+                    "pairs":"ETH",
+                    "maker_fees":"0.1",
+                    "taker_fees":"0.2"
+                  }]
+                }]
+
+        Example
+        -------
+         ::
+
+            bfx_client.account_infos()
+
+        """
+        payload = {
+            "request": "/v1/account_infos",
+            "nonce": self._nonce()
+        }
+        response = self._post("account_infos", payload=payload, verify=True)
+        return response
+
+    def account_fees(self):
+        """`See the fees applied to your withdrawals
+        <https://docs.bitfinex.com/reference#rest-auth-account-fees>`_
+
+
+        See the fees applied to your withdrawals
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "withdraw":{
+                    "BTC": "0.0005",
+                    "LTC": 0,
+                    "ETH": 0,
+                    ...
+                  }
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.account_fees()
+
+        """
+        payload = {
+            "request": "/v1/account_fees",
+            "nonce": self._nonce()
+        }
+        response = self._post("account_fees", payload=payload, verify=True)
+        return response
+
+    def summary(self):
+        """`Returns a 30-day summary of your trading volume and return on margin funding.
+        <https://docs.bitfinex.com/reference#rest-auth-account-fees>`_
+
+
+        Returns a 30-day summary of your trading volume and return on margin funding.
+
+        Returns
+        -------
+        dict
+             ::
+
+                {
+                  "trade_vol_30d":[
+                    {"curr":"BTC","vol":11.88696022},
+                    {"curr":"LTC","vol":0.0},
+                    {"curr":"ETH","vol":0.1},
+                    {"curr":"Total (USD)","vol":5027.63}
+                  ],
+                  "funding_profit_30d":[
+                    {"curr":"USD","amount":0.0},
+                    {"curr":"BTC","amount":0.0},
+                    {"curr":"LTC","amount":0.0},
+                    {"curr":"ETH","amount":0.0}
+                  ],
+                  "maker_fee":0.001,
+                  "taker_fee":0.002
+                }
+
+        Example
+        -------
+         ::
+
+            bfx_client.summary()
+
+        """
+        payload = {
+            "request": "/v1/summary",
+            "nonce": self._nonce()
+        }
+        response = self._post("summary", payload=payload, verify=True)
+        return response
 
     def place_order(self, amount, price, side, ord_type, symbol='btcusd', exchange='bitfinex'):
         """

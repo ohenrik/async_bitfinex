@@ -1,159 +1,32 @@
+"""Websocket Client for Bitfinex V2 API."""
 # coding=utf-8
-import threading
 import json
 import hmac
 import hashlib
-from autobahn.twisted.websocket import WebSocketClientFactory, \
-    WebSocketClientProtocol, \
-    connectWS
-from twisted.internet import reactor, ssl
-from twisted.internet.protocol import ReconnectingClientFactory
-from twisted.internet.error import ReactorAlreadyRunning
+import asyncio
+import websockets
+from websockets.protocol import State
 from bitfinex import utils
 from . import abbreviations
+from .futures_handler import FuturesHandler, CLIENT_HANDLERS
 
-# Example used to make send logic
-# https://stackoverflow.com/questions/18899515/writing-an-interactive-client-with-twisted-autobahn-websockets
+STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
 
-class BitfinexClientProtocol(WebSocketClientProtocol):
+class TimedFuture(asyncio.Future):
 
-    def __init__(self, factory, payload=None):
+    def __init__(self, timeout=None):
         super().__init__()
-        self.factory = factory
-        self.payload = payload
+        if timeout:
+            asyncio.ensure_future(self.trigger_timeout(timeout))
 
-    def onOpen(self):
-        self.factory.protocol_instance = self
-
-    def onConnect(self, response):
-        if self.payload:
-            self.sendMessage(self.payload, isBinary=False)
-        # reset the delay after reconnecting
-        self.factory.resetDelay()
-
-    def onMessage(self, payload, isBinary):
-        if not isBinary:
-            try:
-                payload_obj = json.loads(payload.decode('utf8'))
-            except ValueError:
-                pass
-            else:
-                self.factory.callback(payload_obj)
+    async def trigger_timeout(self, timeout):
+        await asyncio.sleep(timeout)
+        if not self.done():
+            self.set_exception(TimeoutError)
 
 
-class BitfinexReconnectingClientFactory(ReconnectingClientFactory):
-
-    # set initial delay to a short time
-    initialDelay = 0.1
-
-    maxDelay = 20
-
-    maxRetries = 30
-
-
-class BitfinexClientFactory(WebSocketClientFactory, BitfinexReconnectingClientFactory):
-
-    def __init__(self, *args, payload=None, **kwargs):
-        WebSocketClientFactory.__init__(self, *args, **kwargs)
-        self.protocol_instance = None
-        self.base_client = None
-        self.payload = payload
-
-    protocol = BitfinexClientProtocol
-    _reconnect_error_payload = {
-        'e': 'error',
-        'm': 'Max reconnect retries reached'
-    }
-
-    def clientConnectionFailed(self, connector, reason):
-        self.retry(connector)
-        if self.retries > self.maxRetries:
-            self.callback(self._reconnect_error_payload)
-
-    def clientConnectionLost(self, connector, reason):
-        self.retry(connector)
-        if self.retries > self.maxRetries:
-            self.callback(self._reconnect_error_payload)
-
-    def buildProtocol(self, addr):
-        return BitfinexClientProtocol(self, payload=self.payload)
-
-
-class BitfinexSocketManager(threading.Thread):
-
-    STREAM_URL = 'wss://api.bitfinex.com/ws/2'
-
-    def __init__(self):  # client
-        """Initialise the BitfinexSocketManager"""
-        threading.Thread.__init__(self)
-        self.factories = {}
-        self._connected_event = threading.Event()
-        self._conns = {}
-        self._user_timer = None
-        self._user_listen_key = None
-        self._user_callback = None
-
-    def _start_socket(self, id_, payload, callback):
-        if id_ in self._conns:
-            return False
-
-        factory_url = self.STREAM_URL
-        factory = BitfinexClientFactory(factory_url, payload=payload)
-        factory.base_client = self
-        factory.protocol = BitfinexClientProtocol
-        factory.callback = callback
-        factory.reconnect = True
-        self.factories[id_] = factory
-        reactor.callFromThread(self.add_connection, id_)
-
-    def add_connection(self, id_):
-        """
-        Convenience function to connect and store the resulting
-        connector.
-        """
-        factory = self.factories[id_]
-        context_factory = ssl.ClientContextFactory()
-        self._conns[id_] = connectWS(factory, context_factory)
-
-    def stop_socket(self, conn_key):
-        """Stop a websocket given the connection key
-
-        Parameters
-        ----------
-        conn_key : str
-            Socket connection key
-
-        Returns
-        -------
-        str, bool
-            connection key string if successful, False otherwise
-        """
-        if conn_key not in self._conns:
-            return
-
-        # disable reconnecting if we are closing
-        self._conns[conn_key].factory = WebSocketClientFactory(self.STREAM_URL)
-        self._conns[conn_key].disconnect()
-        del self._conns[conn_key]
-
-    def run(self):
-        try:
-            reactor.run(installSignalHandlers=False)
-        except ReactorAlreadyRunning:
-            # Ignore error about reactor already running
-            pass
-
-    def close(self):
-        """Close all connections
-        """
-        keys = set(self._conns.keys())
-        for key in keys:
-            self.stop_socket(key)
-        self._conns = {}
-
-
-class WssClient(BitfinexSocketManager):
+class WssClient():
     """Websocket client for bitfinex.
 
     Parameters
@@ -173,15 +46,14 @@ class WssClient(BitfinexSocketManager):
 
     """
 
-    ###########################################################################
-    # Bitfinex commands
-    ###########################################################################
-
-    def __init__(self, key=None, secret=None, nonce_multiplier=1.0):  # client
+    def __init__(self, key=None, secret=None, nonce_multiplier=1.0, loop=None):  # client
         super().__init__()
         self.key = key
         self.secret = secret
+        self.connections = {}
         self.nonce_multiplier = nonce_multiplier
+        self.futures = FuturesHandler(CLIENT_HANDLERS)
+        self.loop = loop or asyncio.get_event_loop()
 
     def stop(self):
         """Tries to close all connections and finally stops the reactor.
@@ -198,7 +70,68 @@ class WssClient(BitfinexSocketManager):
         need to increase the nonce_multiplier."""
         return str(utils.get_nonce(self.nonce_multiplier))
 
-    def authenticate(self, callback, filters=None):
+    def stop_channel(self, connection_name):
+        """Closes one spesific webscoket connection by name
+
+        Parameters
+        ----------
+        connection_name : str
+            the name of the websocket connection to close.
+        """
+        print(f"Stopping: {connection_name}")
+        asyncio.ensure_future(self.connections[connection_name].close())
+
+    def stop_all(self):
+        """Closes all webscoket connections"""
+        for connection_name in self.connections:
+            self.stop_channel(connection_name)
+
+    async def create_connection(self, connection_name, payload, callback):
+        """Create a new websocket connection, store the connection and
+        assign a callback for incomming messages.
+
+        Parameters
+        ----------
+        connection_name :  str
+            Name/id of the websocket channel. Used when sending messages or for
+            stopping a channel.
+
+        payload : str
+            A json dictionary containing the subscribe instructions for bitfinex.
+
+        callback : func
+            A function to use to handle incomming messages. This channel wil
+            be handling all messages returned from operations like new_order or
+            cancel_order, so make sure you handle all these messages.
+        """
+        loop = asyncio.get_event_loop()
+        async with websockets.connect(STREAM_URL) as websocket:
+            self.connections[connection_name] = websocket
+            await self.connections[connection_name].send(payload)
+            # first_message = await websocket.recv()
+            # loop.create_task(self.futures(first_message))
+            async for message in self.connections[connection_name]:
+                message = json.loads(message)
+                loop.create_task(self.futures(message))
+                await callback(message)
+
+    async def subscribe(self, connection_name, payload, callback=None):
+        """Subscribes over existing connection if present. Creates new connection
+        if needed."""
+        if connection_name in self.connections:
+            while not self.connections[connection_name].state == State(1): #OPEN
+                await asyncio.sleep(1)
+            asyncio.get_event_loop().create_task(
+                self.connections[connection_name].send(payload)
+            )
+        else:
+            print("New connection created")
+            assert callback, "Callback function cannot be None"
+            asyncio.ensure_future(
+                self.create_connection(connection_name, payload, callback)
+            )
+
+    def authenticate(self, callback, filters=None, timeout=None):
         """Method used to create an authenticated channel that both recieves
         account spesific messages and is used to send account spesific messages.
         So in order to be able to use the new_order method, you have to
@@ -249,10 +182,14 @@ class WssClient(BitfinexSocketManager):
         }
         if filters:
             data['filter'] = filters
+        self.futures["auth"] = TimedFuture(timeout)
+        self.futures["auth"].future_id = "auth"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket("auth", payload, callback)
+        asyncio.ensure_future(self.create_connection("auth", payload, callback))
+        return self.futures["auth"]
 
-    def subscribe_to_ticker(self, symbol, callback):
+    def subscribe_to_ticker(self, symbol, callback=None, timeout=None,
+                            connection_name="ticker"):
         """Subscribe to the passed symbol ticks data channel.
 
         Parameters
@@ -282,16 +219,24 @@ class WssClient(BitfinexSocketManager):
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        id_ = "_".join(["ticker", symbol])
+        future_id = "_".join(["ticker", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'ticker',
             'symbol': symbol,
         }
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
-    def subscribe_to_trades(self, symbol, callback):
+    def subscribe_to_trades(self, symbol, callback=None, connection_name="trades",
+                            timeout=None):
         """Subscribe to the passed symbol trades data channel.
 
         Parameters
@@ -301,6 +246,15 @@ class WssClient(BitfinexSocketManager):
 
         callback : func
             A function to use to handle incomming messages
+
+        timeout : int
+            Seconds before subcribe request response future times out
+
+        Returns
+        -------
+        str
+            future id of subscribe request response
+
 
         Example
         -------
@@ -321,17 +275,27 @@ class WssClient(BitfinexSocketManager):
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        id_ = "_".join(["trades", symbol])
+        future_id = "_".join(["trades", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'trades',
             'symbol': symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        # if not self.connections.get(connection_name, False):
+        #     self.connections[connection_name] = DummyState
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
     # Precision: R0, P0, P1, P2, P3
-    def subscribe_to_orderbook(self, symbol, precision, callback):
+    def subscribe_to_orderbook(self, symbol, precision, length, callback=None,
+                               connection_name="book", timeout=None):
         """Subscribe to the orderbook of a given symbol.
 
         Parameters
@@ -341,6 +305,9 @@ class WssClient(BitfinexSocketManager):
 
         precision : str
             Accepted values as strings {R0, P0, P1, P2, P3}
+
+        length : integer
+            Accepted values are 25 and 100
 
         callback : func
             A function to use to handle incomming messages
@@ -357,25 +324,33 @@ class WssClient(BitfinexSocketManager):
             # Then simply reuse it later
             my_client = WssClient(key, secret)
 
-            my_client.subscribe_to_orderbook(
+            my_client.connect_to_orderbook(
                 symbol="BTCUSD",
                 precision="P1",
                 callback=my_handler
             )
-            my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        id_ = "_".join(["order", symbol])
+        future_id = "_".join(["book", symbol])
         data = {
-            'event': 'subscribe',
+            "event": 'subscribe',
             "channel": "book",
             "prec": precision,
-            'symbol': symbol,
+            "len": length,
+            "symbol": symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
-    def subscribe_to_candles(self, symbol, timeframe, callback):
+    def subscribe_to_candles(self, symbol, timeframe, callback=None,
+                             timeout=None, connection_name="candles"):
         """Subscribe to the passed symbol's OHLC data channel.
 
         Parameters
@@ -421,26 +396,34 @@ class WssClient(BitfinexSocketManager):
 
         """
 
+        timeframe = timeframe or '1m'
+
         valid_tfs = ['1m', '5m', '15m', '30m', '1h', '3h', '6h', '12h', '1D',
                      '7D', '14D', '1M']
-        if timeframe:
-            if timeframe not in valid_tfs:
-                raise ValueError("timeframe must be any of %s" % valid_tfs)
-        else:
-            timeframe = '1m'
-        identifier = ('candles', symbol, timeframe)
-        id_ = "_".join(identifier)
+
+        if timeframe not in valid_tfs:
+            raise ValueError("timeframe must be any of %s" % valid_tfs)
+
         symbol = utils.order_symbol(symbol)
         key = 'trade:' + timeframe + ':' + symbol
+        identifier = ('candles', key)
+        future_id = "_".join(identifier)
         data = {
             'event': 'subscribe',
             'channel': 'candles',
             'key': key,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        return self._start_socket(id_, payload, callback)
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
-    def ping(self, channel="auth"):
+    def ping(self, connection_name="auth", timeout=None):
         """Ping bitfinex.
 
         Parameters
@@ -455,12 +438,14 @@ class WssClient(BitfinexSocketManager):
             'cid': client_cid
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories[channel].protocol_instance.sendMessage(payload, isBinary=False)
-        return client_cid
+        pong_future_id = f"pong_{client_cid}"
+        self.futures[pong_future_id] = TimedFuture(timeout)
+        self.futures[pong_future_id].future_id = pong_future_id
+        asyncio.get_event_loop().create_task(self.connections[connection_name].send(payload))
+        return self.futures[pong_future_id]
 
-    def new_order_op(self, order_type, symbol, amount, price, price_trailing=None,
-                     price_aux_limit=None, price_oco_stop=None, hidden=0,
-                     flags=None, tif=None, set_cid=True):
+    @staticmethod
+    def new_order_op(order_type, symbol, amount, price, **kwargs):
         """Create new order operation
 
         Parameters
@@ -537,26 +522,27 @@ class WssClient(BitfinexSocketManager):
             )
 
         """
-        flags = flags or []
+        client_order_id = kwargs.get("cid", utils.create_cid())
         order_op = {
             'type': order_type,
             'symbol': utils.order_symbol(symbol),
             'amount': amount,
             'price': price,
-            'hidden': hidden,
-            "flags": sum(flags),
+            'hidden': kwargs.get("hidden", 0),
+            "flags": sum(kwargs.get("flags", [])),
         }
-        if price_trailing:
-            order_op['price_trailing'] = price_trailing
 
-        if price_aux_limit:
-            order_op['price_aux_limit'] = price_aux_limit
+        if kwargs.get("price_trailing"):
+            order_op['price_trailing'] = kwargs.get("price_trailing")
 
-        if price_oco_stop:
-            order_op['price_oco_stop'] = price_oco_stop
+        if kwargs.get("price_aux_limit"):
+            order_op['price_aux_limit'] = kwargs.get("price_aux_limit")
 
-        if tif:
-            order_op['tif'] = tif
+        if kwargs.get("price_oco_stop"):
+            order_op['price_oco_stop'] = kwargs.get("price_oco_stop")
+
+        if kwargs.get("tif"):
+            order_op['tif'] = kwargs.get("tif")
 
         if set_cid:
             client_order_id = utils.create_cid()
@@ -564,9 +550,23 @@ class WssClient(BitfinexSocketManager):
 
         return order_op
 
-    def new_order(self, order_type, symbol, amount, price, price_trailing=None,
-                  price_aux_limit=None, price_oco_stop=None, hidden=0,
-                  flags=None, tif=None, set_cid=True):
+    def _create_new_order_future(self, cid, order_type, timeout=None):
+        """Create future objects for new orders"""
+        confirm_future_id = None
+        if order_type in ("MARKET", "EXCHANGE MARKET"):
+            confirm_future_id = f"oc_{cid}"
+            self.futures[confirm_future_id] = TimedFuture(timeout)
+        else:
+            confirm_future_id = f"on_{cid}"
+            self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
+
+        request_future_id = f"on-req_{cid}"
+        self.futures[request_future_id] = TimedFuture(timeout)
+        self.futures[request_future_id].future_id = request_future_id
+        return (self.futures[request_future_id], self.futures[confirm_future_id])
+
+    def new_order(self, order_type, symbol, amount, price, **kwargs):
         """
         Create new order.
 
@@ -606,8 +606,8 @@ class WssClient(BitfinexSocketManager):
 
         tif : datetime string
 
-        set_cid : bool
-            wheter or not to set a cid.
+        timeout : int
+            Seconds before future objects are timed out.
 
         Returns
         -------
@@ -624,7 +624,7 @@ class WssClient(BitfinexSocketManager):
             # Then simply reuse it later
             my_client = WssClient(key, secret)
             my_client.authenticate()
-            my_client.start()
+
 
             order_client_id = my_client.new_order(
                 order_type="LIMIT",
@@ -639,13 +639,7 @@ class WssClient(BitfinexSocketManager):
             symbol=symbol,
             amount=amount,
             price=price,
-            price_trailing=price_trailing,
-            price_aux_limit=price_aux_limit,
-            price_oco_stop=price_oco_stop,
-            hidden=hidden,
-            flags=flags,
-            tif=tif,
-            set_cid=set_cid
+            **kwargs
         )
         data = [
             0,
@@ -654,13 +648,20 @@ class WssClient(BitfinexSocketManager):
             operation
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-        if set_cid is True:
-            return operation["cid"]
-        else:
-            return None
+        # Create a future method for handling responses
+        request_future, confirm_future = self._create_new_order_future(
+            cid=operation["cid"],
+            order_type=order_type,
+            timeout=kwargs.get("timeout")
+        )
+        self.loop.create_task(self.connections["auth"].send(payload))
+        return {
+            "request_future": request_future,
+            "confirm_future": confirm_future,
+            "cid": operation['cid']
+        }
 
-    def multi_order(self, operations):
+    async def multi_order(self, operations):
         """Multi order operation.
 
         Parameters
@@ -715,16 +716,22 @@ class WssClient(BitfinexSocketManager):
             operations
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        await self.connections["auth"].send(payload)
         return [order[1].get("cid", None) for order in operations]
 
-    def cancel_order(self, order_id):
-        """Cancel order
+    def cancel_order(self, order_id=None, order_cid=None, order_date=None, timeout=None):
+        """Cancel order using either the id (order_id) or the client id (order_cid).
 
         Parameters
         ----------
         order_id : int, str
             Order id created by Bitfinex
+        order_cid : str
+            cid string. e.g. "1234154"
+        order_date : str
+            Iso formated order date. e.g. "2012-01-23"
+        timeout : int
+            Seconds before future objects are timed out.
 
         Example
         -------
@@ -740,68 +747,51 @@ class WssClient(BitfinexSocketManager):
                 order_id=1234
             )
 
-        """
-        data = [
-            0,
-            abbreviations.get_notification_code('order cancel'),
-            None,
-            {
-                # docs: http://bit.ly/2BVqwW6
-                'id': order_id
-            }
-        ]
-        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
-
-    def cancel_order_cid(self, order_cid, order_date):
-        """Cancel order using the client id and the date of the cid. Both are
-        returned from the new_order command from this library.
-
-        Parameters
-        ----------
-        order_cid : str
-            cid string. e.g. "1234154"
-
-        order_date : str
-            Iso formated order date. e.g. "2012-01-23"
-
-
-        Example
-        -------
-         ::
-
-            # You should only need to create and authenticate a client once.
-            # Then simply reuse it later
-            my_client = WssClient(key, secret)
-            my_client.authenticate()
-            my_client.start()
-
-            # order_cid created by this library is always a milliseconds
-            # time stamp. So you can just divide it by 1000 to get the timestamp.
+            # Using client id formated as timestamp * 10k (from utils)
             my_client.cancel_order(
-                order_cid=1538911910035,
-                order_date=(
-                    datetime.utcfromtimestamp(
-                        1538911910035/1000.0
-                    ).strftime("%Y-%m-%d")
-                )
+                order_cid=1234
+                # Optionally supply the order_date if you are using a custom cid format
+                # order_date="2019-01-01"
             )
 
         """
+        assert any([order_id, order_cid]), "Requires order_id or order_cid"
+
+        if order_id:
+            cancel_message = {'id': order_id}
+        else:
+            cancel_message = {
+                # docs: http://bit.ly/2BVqwW6
+                'cid': order_cid,
+                'cid_date': order_date or utils.cid_to_date(order_cid)
+            }
+
         data = [
             0,
             abbreviations.get_notification_code('order cancel'),
             None,
-            {
-                # docs: http://bit.ly/2BVqwW6
-                'cid': order_cid,
-                'cid_date': order_date
-            }
+            cancel_message
         ]
+        request_future_id = f"oc-req_{order_id or order_cid}"
+        confirm_future_id = f"oc_{order_id or order_cid}"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
 
-    def update_order(self, **order_settings):
+        self.futures[request_future_id] = TimedFuture(timeout)
+        self.futures[request_future_id].future_id = request_future_id
+
+        self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
+
+        self.loop.create_task(self.connections["auth"].send(payload))
+        return {
+            "request_future": self.futures[request_future_id],
+            "confirm_future": self.futures[confirm_future_id],
+            "id": order_id,
+            "cid": order_cid,
+            "cid_date": order_date
+        }
+
+    def update_order(self, timeout=None, **order_settings):
         """Update order using the order id
 
         Parameters
@@ -837,7 +827,21 @@ class WssClient(BitfinexSocketManager):
             order_settings
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+
+        request_future_id = f"ou-req_{order_settings['id']}"
+        confirm_future_id = f"ou_{order_settings['id']}"
+        self.futures[request_future_id] = TimedFuture(timeout)
+        self.futures[request_future_id].future_id = request_future_id
+
+        self.futures[confirm_future_id] = TimedFuture(timeout)
+        self.futures[confirm_future_id].future_id = confirm_future_id
+
+        self.loop.create_task(self.connections["auth"].send(payload))
+        return {
+            "request_future": self.futures[request_future_id],
+            "confirm_future": self.futures[confirm_future_id],
+            "id": order_settings['id']
+        }
 
     def calc(self, *calculations):
         """
@@ -898,4 +902,4 @@ class WssClient(BitfinexSocketManager):
             calculations
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.factories["auth"].protocol_instance.sendMessage(payload, isBinary=False)
+        self.loop.create_task(self.connections["auth"].send(payload))
