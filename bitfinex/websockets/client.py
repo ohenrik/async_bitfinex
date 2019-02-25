@@ -5,7 +5,7 @@ import hmac
 import hashlib
 import asyncio
 import websockets
-
+from websockets.protocol import State
 from bitfinex import utils
 from . import abbreviations
 from .futures_handler import FuturesHandler, CLIENT_HANDLERS
@@ -78,13 +78,13 @@ class WssClient():
         for connection_name in self.connections:
             self.stop_channel(connection_name)
 
-    async def create_connection(self, channel_name, payload, callback):
+    async def create_connection(self, connection_name, payload, callback):
         """Create a new websocket connection, store the connection and
         assign a callback for incomming messages.
 
         Parameters
         ----------
-        channel_name :  str
+        connection_name :  str
             Name/id of the websocket channel. Used when sending messages or for
             stopping a channel.
 
@@ -96,16 +96,32 @@ class WssClient():
             be handling all messages returned from operations like new_order or
             cancel_order, so make sure you handle all these messages.
         """
+        loop = asyncio.get_event_loop()
         async with websockets.connect(STREAM_URL) as websocket:
-            await websocket.send(payload)
-            self.connections[channel_name] = websocket
-            async for message in self.connections[channel_name]:
+            self.connections[connection_name] = websocket
+            await self.connections[connection_name].send(payload)
+            # first_message = await websocket.recv()
+            # loop.create_task(self.futures(first_message))
+            async for message in self.connections[connection_name]:
                 message = json.loads(message)
-                self.futures(message)
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(message)
-                else:
-                    callback(message)
+                loop.create_task(self.futures(message))
+                await callback(message)
+
+    async def subscribe(self, connection_name, payload, callback=None):
+        """Subscribes over existing connection if present. Creates new connection
+        if needed."""
+        if connection_name in self.connections:
+            while not self.connections[connection_name].state == State(1): #OPEN
+                await asyncio.sleep(1)
+            asyncio.get_event_loop().create_task(
+                self.connections[connection_name].send(payload)
+            )
+        else:
+            print("New connection created")
+            assert callback, "Callback function cannot be None"
+            asyncio.ensure_future(
+                self.create_connection(connection_name, payload, callback)
+            )
 
     def authenticate(self, callback, filters=None, timeout=None):
         """Method used to create an authenticated channel that both recieves
@@ -164,8 +180,8 @@ class WssClient():
         asyncio.ensure_future(self.create_connection("auth", payload, callback))
         return self.futures["auth"]
 
-
-    def subscribe_to_ticker(self, symbol, callback, timeout=None):
+    def subscribe_to_ticker(self, symbol, callback=None, timeout=None,
+                            connection_name="ticker"):
         """Subscribe to the passed symbol ticks data channel.
 
         Parameters
@@ -195,19 +211,24 @@ class WssClient():
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        channel_name = "_".join(["ticker", symbol])
+        future_id = "_".join(["ticker", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'ticker',
             'symbol': symbol,
         }
-        self.futures[channel_name] = TimedFuture(timeout)
-        self.futures[channel_name].future_id = channel_name
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
-        return self.futures[channel_name]
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
-    def subscribe_to_trades(self, symbol, callback, timeout=None):
+    def subscribe_to_trades(self, symbol, callback=None, connection_name="trades",
+                            timeout=None):
         """Subscribe to the passed symbol trades data channel.
 
         Parameters
@@ -246,20 +267,27 @@ class WssClient():
             my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        channel_name = "_".join(["trades", symbol])
+        future_id = "_".join(["trades", symbol])
         data = {
             'event': 'subscribe',
             'channel': 'trades',
             'symbol': symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[channel_name] = TimedFuture(timeout)
-        self.futures[channel_name].future_id = channel_name
-        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
-        return self.futures[channel_name]
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        # if not self.connections.get(connection_name, False):
+        #     self.connections[connection_name] = DummyState
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
     # Precision: R0, P0, P1, P2, P3
-    def subscribe_to_orderbook(self, symbol, precision, length, callback, timeout=None):
+    def subscribe_to_orderbook(self, symbol, precision, length, callback=None,
+                               connection_name="book", timeout=None):
         """Subscribe to the orderbook of a given symbol.
 
         Parameters
@@ -288,15 +316,14 @@ class WssClient():
             # Then simply reuse it later
             my_client = WssClient(key, secret)
 
-            my_client.subscribe_to_orderbook(
+            my_client.connect_to_orderbook(
                 symbol="BTCUSD",
                 precision="P1",
                 callback=my_handler
             )
-            my_client.start()
         """
         symbol = utils.order_symbol(symbol)
-        channel_name = "_".join(["book", symbol])
+        future_id = "_".join(["book", symbol])
         data = {
             "event": 'subscribe',
             "channel": "book",
@@ -305,12 +332,17 @@ class WssClient():
             "symbol": symbol,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[channel_name] = TimedFuture(timeout)
-        self.futures[channel_name].future_id = channel_name
-        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
-        return self.futures[channel_name]
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
-    def subscribe_to_candles(self, symbol, timeframe, callback, timeout=None):
+    def subscribe_to_candles(self, symbol, timeframe, callback=None,
+                             timeout=None, connection_name="candles"):
         """Subscribe to the passed symbol's OHLC data channel.
 
         Parameters
@@ -367,19 +399,23 @@ class WssClient():
         symbol = utils.order_symbol(symbol)
         key = 'trade:' + timeframe + ':' + symbol
         identifier = ('candles', key)
-        channel_name = "_".join(identifier)
+        future_id = "_".join(identifier)
         data = {
             'event': 'subscribe',
             'channel': 'candles',
             'key': key,
         }
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.futures[channel_name] = TimedFuture(timeout)
-        self.futures[channel_name].future_id = channel_name
-        asyncio.ensure_future(self.create_connection(channel_name, payload, callback))
-        return self.futures[channel_name]
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback
+        ))
+        return self.futures[future_id]
 
-    def ping(self, channel="auth", timeout=None):
+    def ping(self, connection_name="auth", timeout=None):
         """Ping bitfinex.
 
         Parameters
@@ -397,7 +433,7 @@ class WssClient():
         pong_future_id = f"pong_{client_cid}"
         self.futures[pong_future_id] = TimedFuture(timeout)
         self.futures[pong_future_id].future_id = pong_future_id
-        asyncio.get_event_loop().create_task(self.connections[channel].send(payload))
+        asyncio.get_event_loop().create_task(self.connections[connection_name].send(payload))
         return self.futures[pong_future_id]
 
     @staticmethod

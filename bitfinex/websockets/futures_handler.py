@@ -180,13 +180,11 @@ def subscription_confirmations(message, futures):
     """
     if message["channel"] in ("trades", "book", "ticker"):
         future_id = f"{message['channel']}_{message['symbol']}"
-        future = futures[future_id]
-        future.set_result(message)
+        futures[future_id].set_result(message)
         del futures[future_id]
     elif message["channel"] == "candles":
         future_id = f"candles_{message['key']}"
-        future = futures[future_id]
-        future.set_result(message)
+        futures[future_id].set_result(message)
         del futures[future_id]
 
 def auth_confirmation(message, futures):
@@ -255,7 +253,7 @@ class FuturesHandler(MutableMapping):
             del self.futures[future_id]
         asyncio.get_event_loop().create_task(self.clear_expired_futures())
 
-    def __call__(self, message):
+    async def __call__(self, message):
         """Try to handle/intercept messages to set results for awaited
         future objects
 
@@ -291,10 +289,12 @@ class FuturesHandler(MutableMapping):
 
     @staticmethod
     def _get_message_type(message):
-        if isinstance(message, list):
+        if isinstance(message, list) and message[0] == 0:
             message = message[2] if message[1] == "n" else message
             # message[1] <-- message type str, e.g. "on" (successfull new order)
             message_type = message[1]
+        elif isinstance(message, list) and message[0] > 0:
+            message_type = "update"
         else:
             message_type = message["event"]
         return message_type, message

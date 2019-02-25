@@ -69,17 +69,25 @@ async def cancel_order(client, cid):
             "already canceled, excuted or never existed."
         )
 
+async def async_print(message):
+    """Async print, to ensure syncronous print versions"""
+    print(message)
+
 async def main():
     client = WssClient(
         key=os.environ.get("BITFINEX_KEY"),
         secret=os.environ.get("BITFINEX_SECRET")
     )
-    auth_future = client.authenticate(print, timeout=3)
+    auth_future = client.authenticate(async_print, timeout=3)
     print(auth_future.future_id)
     print(await auth_future)
 
-    trades_future = client.subscribe_to_trades(symbol="BTCUSD", callback=print, timeout=3)
-    print(await trades_future)
+    trades_future = client.subscribe_to_trades(symbol="BTCUSD", callback=async_print, timeout=3)
+    # Must await the first connection allow subsequent connections
+    first_result = await trades_future
+    trades_future = client.subscribe_to_trades(symbol="ETHUSD", callback=async_print, timeout=3)
+    trades_future = client.subscribe_to_trades(symbol="XRPUSD", callback=async_print, timeout=3)
+    # print(await trades_future)
 
     # book_future = client.subscribe_to_orderbook(symbol="BTCUSD", precision="P0", length=25, callback=lambda x: x)
     # print(await book_future)
@@ -95,8 +103,6 @@ async def main():
     # update_response = await update_order(client, id=order_response["id"], price="1010.0", amount="0.1")
     # print(update_response, order_response)
     # await cancel_order(client, order_response["cid"])
-
-
 
 if __name__ == '__main__':
     main_loop = asyncio.get_event_loop()
