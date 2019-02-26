@@ -86,4 +86,6 @@ ORDER_TYPES = [
     "EXCHANGE FOK",
     "STOP LIMIT",
     "EXCHANGE STOP LIMIT",
+    "IOC",
+    "EXCHANGE IOC",
 ]
