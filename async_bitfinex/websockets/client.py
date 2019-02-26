@@ -97,7 +97,7 @@ class WssClient():
             )
             return self.futures[future_id]
 
-    async def create_connection(self, connection_name, payload, callback):
+    async def create_connection(self, connection_name, payload, callback, **kwargs):
         """Create a new websocket connection, store the connection and
         assign a callback for incomming messages.
 
@@ -115,23 +115,34 @@ class WssClient():
             be handling all messages returned from operations like new_order or
             cancel_order, so make sure you handle all these messages.
         """
+        empty_messages_callback = kwargs.get("empty_messages_callback", None)
         async with websockets.connect(STREAM_URL) as websocket:
             self.connections[connection_name] = websocket
-            await self.connections[connection_name].send(payload)
-            async for message in self.connections[connection_name]:
+            await websocket.send(payload)
+            async for message in websocket:
                 message = json.loads(message)
                 self.futures(message)
-                await callback(message)
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(message)
+                else:
+                    callback(message)
+                if empty_messages_callback and (not websocket.messages):
+                    if asyncio.iscoroutinefunction(empty_messages_callback):
+                        await empty_messages_callback()
+                    else:
+                        empty_messages_callback()
+
 
     async def subscribe(self, connection_name, payload, create_connection=False,
-                        callback=None):
+                        callback=None, **kwargs):
         """Subscribes over existing connection if present. Creates new connection
         if needed."""
         if create_connection:
             # print("New connection created")
             assert callback, "Callback function cannot be None"
             asyncio.ensure_future(
-                self.create_connection(connection_name, payload, callback)
+                self.create_connection(connection_name, payload, callback,
+                                       **kwargs)
             )
         else:
             while not self.connections[connection_name].state == State(1): #OPEN
@@ -140,7 +151,7 @@ class WssClient():
                 self.connections[connection_name].send(payload)
             )
 
-    def authenticate(self, callback, filters=None, timeout=None):
+    def authenticate(self, callback, filters=None, timeout=None, **kwargs):
         """Method used to create an authenticated channel that both recieves
         account spesific messages and is used to send account spesific messages.
         So in order to be able to use the new_order method, you have to
@@ -194,11 +205,16 @@ class WssClient():
         self.futures["auth"] = TimedFuture(timeout)
         self.futures["auth"].future_id = "auth"
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        asyncio.ensure_future(self.create_connection("auth", payload, callback))
+        asyncio.ensure_future(self.create_connection(
+            connection_name="auth",
+            payload=payload,
+            callback=callback,
+            **kwargs
+        ))
         return self.futures["auth"]
 
     def subscribe_to_ticker(self, symbol, callback=None, timeout=None,
-                            connection_name="ticker"):
+                            connection_name="ticker", **kwargs):
         """Subscribe to the passed symbol ticks data channel.
 
         Parameters
@@ -247,12 +263,13 @@ class WssClient():
             connection_name=connection_name,
             payload=payload,
             callback=callback,
-            create_connection=create_connection
+            create_connection=create_connection,
+            **kwargs
         ))
         return self.futures[future_id]
 
     def subscribe_to_trades(self, symbol, callback=None, connection_name="trades",
-                            timeout=None):
+                            timeout=None, **kwargs):
         """Subscribe to the passed symbol trades data channel.
 
         Parameters
@@ -309,13 +326,14 @@ class WssClient():
             connection_name=connection_name,
             payload=payload,
             callback=callback,
-            create_connection=create_connection
+            create_connection=create_connection,
+            **kwargs
         ))
         return self.futures[future_id]
 
     # Precision: R0, P0, P1, P2, P3
     def subscribe_to_orderbook(self, symbol, precision, length, callback=None,
-                               connection_name="book", timeout=None):
+                               connection_name="book", timeout=None, **kwargs):
         """Subscribe to the orderbook of a given symbol.
 
         Parameters
@@ -375,12 +393,13 @@ class WssClient():
             connection_name=connection_name,
             payload=payload,
             callback=callback,
-            create_connection=create_connection
+            create_connection=create_connection,
+            **kwargs
         ))
         return self.futures[future_id]
 
     def subscribe_to_candles(self, symbol, timeframe, callback=None,
-                             timeout=None, connection_name="candles"):
+                             timeout=None, connection_name="candles", **kwargs):
         """Subscribe to the passed symbol's OHLC data channel.
 
         Parameters
@@ -455,7 +474,8 @@ class WssClient():
             connection_name=connection_name,
             payload=payload,
             callback=callback,
-            create_connection=create_connection
+            create_connection=create_connection,
+            **kwargs
         ))
         return self.futures[future_id]
 
