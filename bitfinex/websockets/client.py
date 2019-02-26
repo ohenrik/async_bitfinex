@@ -108,11 +108,9 @@ class WssClient():
         async with websockets.connect(STREAM_URL) as websocket:
             self.connections[connection_name] = websocket
             await self.connections[connection_name].send(payload)
-            # first_message = await websocket.recv()
-            # loop.create_task(self.futures(first_message))
             async for message in self.connections[connection_name]:
                 message = json.loads(message)
-                loop.create_task(self.futures(message))
+                self.futures(message)
                 await callback(message)
 
     async def subscribe(self, connection_name, payload, callback=None):

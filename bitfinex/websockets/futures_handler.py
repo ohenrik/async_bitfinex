@@ -253,7 +253,7 @@ class FuturesHandler(MutableMapping):
             del self.futures[future_id]
         asyncio.get_event_loop().create_task(self.clear_expired_futures())
 
-    async def __call__(self, message):
+    def __call__(self, message):
         """Try to handle/intercept messages to set results for awaited
         future objects
 
