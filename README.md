@@ -1,29 +1,18 @@
-# Bitfinex Python Client
-
-**Continuation of**: https://github.com/scottjbarr/bitfinex
+# Asyncio Python Client for Bitfinex
 
 A Python client for the Bitfinex API v1 and v2 + websockets for v2.
 
-### 1.0.0 release note
-
-Functionality related to nonces has been changed in release 1.0.0. This
-might cause existing keys that where used on earlier version of this library
-to stop working due to a "nonce too small" error.
-
-Either create a new key/secret to use with 1.0.0 or use a nonce multiplier of
-100000 (100k).
-
 ## Installation
 
-    pip install bitfinex-v2
+    pip install async_bitfinex
 
 ## Usage example
 
 
-    from bitfinex import WssClient, ClientV2, ClientV1
+    from async_bitfinex import WssClient
 
-    def my_handler(message):
-      # Here you can do stuff with the messages
+    async def my_handler(message):
+      """Function that react to incoming messages"""
       print(message)
 
     my_client = WssClient()
@@ -31,23 +20,22 @@ Either create a new key/secret to use with 1.0.0 or use a nonce multiplier of
         symbol="BTCUSD",
         callback=my_handler
     )
-    my_client.start()
 
 ## Documentation
 
 The full documentation is available here:
-https://bitfinex.readthedocs.io/en/latest/
+https://async_bitfinex.readthedocs.io/en/latest/
 
 ## Compatibility
 
 This code has been tested on
 
-- Python 3.6
+- Python 3.7.1 and 3.7.2
 
-At the moment the library is only supported from 3.6 and above.
+At the moment the library is only supported from 3.7 and above.
 
 
-## Contributing
+# Contributing
 
 Contributions are welcome and i will do my best to merge PR quickly.
 
@@ -80,16 +68,8 @@ At the moment functionality related to websocket v2 is not properly tested.
 
 ## References
 
-- This project is a continuation of: https://github.com/scottjbarr/bitfinex
-- [https://www.bitfinex.com/pages/api](https://www.bitfinex.com/pages/api)
-- [https://community.bitfinex.com/showwiki.php?title=Sample+API+Code](https://community.bitfinex.com/showwiki.php?title=Sample+API+Code)
-- [https://gist.github.com/jordanbaucke/5812039](https://gist.github.com/jordanbaucke/5812039)
+- This project is originally base of: https://github.com/scottjbarr/bitfinex
 
 ## Licence
 
 The MIT License (MIT)
-
-Copyright (c) 2014-2015 Scott Barr
-^ Original project created by this guy.
-
-See [LICENSE.md](LICENSE.md)
