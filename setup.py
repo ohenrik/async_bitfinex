@@ -19,7 +19,7 @@ setup(
     packages=['async_bitfinex'],
     install_requires=DEPENDENCIES,
     # download_url='https://github.com/ohenrik/bitfinex/tarball/%s' % version,
-    keywords=['bitcoin', 'btc'],
+    keywords=['bitfinex', 'bitcoin', 'btc', 'asyncio', 'websockets'],
     classifiers=[],
     zip_safe=True
 )

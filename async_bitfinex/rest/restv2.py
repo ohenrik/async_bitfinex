@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 import hmac
 import hashlib
 import requests
-from bitfinex import utils
+from .. import utils
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"

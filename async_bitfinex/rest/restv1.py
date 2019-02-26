@@ -8,7 +8,7 @@ import base64
 import hmac
 import hashlib
 import requests
-from bitfinex import utils
+from .. import utils
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"

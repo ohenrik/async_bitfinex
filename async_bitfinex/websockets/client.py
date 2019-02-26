@@ -6,7 +6,7 @@ import hashlib
 import asyncio
 import websockets
 from websockets.protocol import State
-from bitfinex import utils
+from .. import utils
 from . import abbreviations
 from .futures_handler import FuturesHandler, CLIENT_HANDLERS
 
