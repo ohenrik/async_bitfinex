@@ -16,7 +16,7 @@ setup(
     author_email='henrik@amplify.no',
     url='https://github.com/ohenrik/async_bitfinex',
     license='MIT',
-    packages=['async_bitfinex'],
+    packages=find_packages(),
     install_requires=DEPENDENCIES,
     # download_url='https://github.com/ohenrik/bitfinex/tarball/%s' % version,
     keywords=['bitfinex', 'bitcoin', 'btc', 'asyncio', 'websockets'],
