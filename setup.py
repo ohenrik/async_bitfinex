@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.1.0a'
+VERSION = '0.1.0'
 
 # Runtime dependencies. See requirements.txt for development dependencies.
 DEPENDENCIES = [
@@ -9,12 +9,12 @@ DEPENDENCIES = [
 ]
 
 setup(
-    name='bitfinex-v2',
+    name='async_bitfinex',
     version=VERSION,
-    description='Python client for the Bitfinex API',
+    description='Python client for Bitfinex ',
     author='Ole Henrik Skogstrøm',
     author_email='henrik@amplify.no',
-    url='https://github.com/ohenrik/bitfinex',
+    url='https://github.com/ohenrik/async_bitfinex',
     license='MIT',
     packages=find_packages(),
     install_requires=DEPENDENCIES,
