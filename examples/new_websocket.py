@@ -1,6 +1,6 @@
 import os
 import asyncio
-from bitfinex import WssClient
+from async_bitfinex import WssClient
 
 async def create_order(client):
     await asyncio.sleep(3)
@@ -82,12 +82,23 @@ async def main():
     print(auth_future.future_id)
     print(await auth_future)
 
-    trades_future = client.subscribe_to_trades(symbol="BTCUSD", callback=async_print, timeout=3)
-    # Must await the first connection allow subsequent connections
-    first_result = await trades_future
-    trades_future = client.subscribe_to_trades(symbol="ETHUSD", callback=async_print, timeout=3)
-    trades_future = client.subscribe_to_trades(symbol="XRPUSD", callback=async_print, timeout=3)
-    # print(await trades_future)
+    trades_future1 = client.subscribe_to_trades(symbol="BTCUSD", callback=async_print, timeout=3)
+    trades_future2 = client.subscribe_to_trades(symbol="ETHUSD", callback=async_print, timeout=3)
+    trades_future3 = client.subscribe_to_trades(symbol="XRPUSD", callback=async_print, timeout=3)
+
+    print("No wainting 5 seconds to close channels")
+    await asyncio.sleep(5)
+
+    btc_channel = await trades_future1
+    eth_channel = await trades_future2
+    xrp_channel = await trades_future3
+
+    result1 = await client.unsubscribe("trades", 1235)
+    print(result1)
+    result2 = await client.unsubscribe("trades", eth_channel["chanId"])
+    print(result2)
+    result3 = await client.unsubscribe("trades", xrp_channel["chanId"])
+    print(result3)
 
     # book_future = client.subscribe_to_orderbook(symbol="BTCUSD", precision="P0", length=25, callback=lambda x: x)
     # print(await book_future)

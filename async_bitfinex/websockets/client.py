@@ -61,10 +61,8 @@ class WssClient():
     def stop(self):
         """Tries to close all connections and finally stops the reactor.
         Properly stops the program."""
-        try:
-            self.close()
-        finally:
-            reactor.stop()
+        for connection in self.connections:
+            connection.close()
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -73,7 +71,7 @@ class WssClient():
         need to increase the nonce_multiplier."""
         return str(utils.get_nonce(self.nonce_multiplier))
 
-    def stop_channel(self, connection_name):
+    def close_connection(self, connection_name):
         """Closes one spesific webscoket connection by name
 
         Parameters
@@ -82,12 +80,22 @@ class WssClient():
             the name of the websocket connection to close.
         """
         print(f"Stopping: {connection_name}")
-        asyncio.ensure_future(self.connections[connection_name].close())
+        self.connections[connection_name].close()
 
-    def stop_all(self):
-        """Closes all webscoket connections"""
-        for connection_name in self.connections:
-            self.stop_channel(connection_name)
+    def unsubscribe(self, connection_name, channel_id, timeout=None):
+        if connection_name in self.connections:
+            future_id = f"unsubscribe_{channel_id}"
+            data = {
+                "event": "unsubscribe",
+                "chanId": channel_id
+            }
+            self.futures[future_id] = TimedFuture(timeout)
+            self.futures[future_id].future_id = future_id
+            payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+            asyncio.get_event_loop().create_task(
+                self.connections[connection_name].send(payload)
+            )
+            return self.futures[future_id]
 
     async def create_connection(self, connection_name, payload, callback):
         """Create a new websocket connection, store the connection and

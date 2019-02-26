@@ -187,6 +187,22 @@ def subscription_confirmations(message, futures):
         futures[future_id].set_result(message)
         del futures[future_id]
 
+def unsubscribe_confirmations(message, futures):
+    """Intercepts unsubscribe messages and check for
+    Future objets with a matching subscribe details.
+
+    Parameters
+    ----------
+    message : str
+        The unaltered response message returned by bitfinex.
+    futures : dict
+        A dict of intercept_id's and future objects.
+        dict{intercept_id, future_object}
+    """
+    future_id = f"unsubscribe_{message['chanId']}"
+    futures[future_id].set_result(message)
+    del futures[future_id]
+
 def auth_confirmation(message, futures):
     """Intercepts auth messages and check for
     Future objets with a matching auth details.
@@ -203,8 +219,26 @@ def auth_confirmation(message, futures):
     future.set_result(message)
     del futures["auth"]
 
+def error_handler(message, futures):
+    """Intercepts error messages and check for
+    Future objets with a matching subscribe details.
+
+    Parameters
+    ----------
+    message : str
+        The unaltered response message returned by bitfinex.
+    futures : dict
+        A dict of intercept_id's and future objects.
+        dict{intercept_id, future_object}
+    """
+    if "unsubscribe" in message["msg"]:
+        unsubscribe_confirmations(message, futures)
+    elif "subscribe" in message["msg"]:
+        subscription_confirmations(message, futures)
+
 CLIENT_HANDLERS = {
     "subscribed": subscription_confirmations,
+    "unsubscribed": unsubscribe_confirmations,
     "auth": auth_confirmation,
     "error": subscription_confirmations,
     "on-req": order_new_request,
