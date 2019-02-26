@@ -13,6 +13,9 @@ from .futures_handler import FuturesHandler, CLIENT_HANDLERS
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
 
+class DummyState:
+    state = State.CONNECTING
+
 class TimedFuture(asyncio.Future):
 
     def __init__(self, timeout=None):
@@ -104,7 +107,6 @@ class WssClient():
             be handling all messages returned from operations like new_order or
             cancel_order, so make sure you handle all these messages.
         """
-        loop = asyncio.get_event_loop()
         async with websockets.connect(STREAM_URL) as websocket:
             self.connections[connection_name] = websocket
             await self.connections[connection_name].send(payload)
@@ -113,20 +115,21 @@ class WssClient():
                 self.futures(message)
                 await callback(message)
 
-    async def subscribe(self, connection_name, payload, callback=None):
+    async def subscribe(self, connection_name, payload, create_connection=False,
+                        callback=None):
         """Subscribes over existing connection if present. Creates new connection
         if needed."""
-        if connection_name in self.connections:
-            while not self.connections[connection_name].state == State(1): #OPEN
-                await asyncio.sleep(1)
-            asyncio.get_event_loop().create_task(
-                self.connections[connection_name].send(payload)
-            )
-        else:
-            print("New connection created")
+        if create_connection:
+            # print("New connection created")
             assert callback, "Callback function cannot be None"
             asyncio.ensure_future(
                 self.create_connection(connection_name, payload, callback)
+            )
+        else:
+            while not self.connections[connection_name].state == State(1): #OPEN
+                await asyncio.sleep(0.1)
+            asyncio.get_event_loop().create_task(
+                self.connections[connection_name].send(payload)
             )
 
     def authenticate(self, callback, filters=None, timeout=None):
@@ -226,10 +229,17 @@ class WssClient():
         self.futures[future_id] = TimedFuture(timeout)
         self.futures[future_id].future_id = future_id
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+
+        create_connection = False
+        if not self.connections.get(connection_name, False):
+            self.connections[connection_name] = DummyState
+            create_connection = True
+
         asyncio.get_event_loop().create_task(self.subscribe(
             connection_name=connection_name,
             payload=payload,
-            callback=callback
+            callback=callback,
+            create_connection=create_connection
         ))
         return self.futures[future_id]
 
@@ -282,12 +292,16 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.futures[future_id] = TimedFuture(timeout)
         self.futures[future_id].future_id = future_id
-        # if not self.connections.get(connection_name, False):
-        #     self.connections[connection_name] = DummyState
+        create_connection = False
+        if not self.connections.get(connection_name, False):
+            self.connections[connection_name] = DummyState
+            create_connection = True
+
         asyncio.get_event_loop().create_task(self.subscribe(
             connection_name=connection_name,
             payload=payload,
-            callback=callback
+            callback=callback,
+            create_connection=create_connection
         ))
         return self.futures[future_id]
 
@@ -309,6 +323,9 @@ class WssClient():
 
         callback : func
             A function to use to handle incomming messages
+
+        connection_name : str
+            The connection handler string. Default: book
 
         Example
         -------
@@ -340,10 +357,17 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.futures[future_id] = TimedFuture(timeout)
         self.futures[future_id].future_id = future_id
+
+        create_connection = False
+        if not self.connections.get(connection_name, False):
+            self.connections[connection_name] = DummyState
+            create_connection = True
+
         asyncio.get_event_loop().create_task(self.subscribe(
             connection_name=connection_name,
             payload=payload,
-            callback=callback
+            callback=callback,
+            create_connection=create_connection
         ))
         return self.futures[future_id]
 
@@ -414,10 +438,16 @@ class WssClient():
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.futures[future_id] = TimedFuture(timeout)
         self.futures[future_id].future_id = future_id
+        create_connection = False
+        if not self.connections.get(connection_name, False):
+            self.connections[connection_name] = DummyState
+            create_connection = True
+
         asyncio.get_event_loop().create_task(self.subscribe(
             connection_name=connection_name,
             payload=payload,
-            callback=callback
+            callback=callback,
+            create_connection=create_connection
         ))
         return self.futures[future_id]
 
@@ -542,9 +572,8 @@ class WssClient():
         if kwargs.get("tif"):
             order_op['tif'] = kwargs.get("tif")
 
-        if set_cid:
-            client_order_id = utils.create_cid()
-            order_op['cid'] = client_order_id
+        client_order_id = utils.create_cid()
+        order_op['cid'] = client_order_id
 
         return order_op
 
