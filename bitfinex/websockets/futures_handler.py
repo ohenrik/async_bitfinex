@@ -265,6 +265,9 @@ class FuturesHandler(MutableMapping):
             A dict of intercept_id's and future objects.
             dict{intercept_id, future_object}
         """
+        # Exit immidiatly if there are no futures to handle
+        if not self.futures:
+            return
         try:
             message_type, message = self._get_message_type(message)
             return self._message_handlers[message_type](message, self.futures)
