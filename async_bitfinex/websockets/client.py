@@ -608,7 +608,7 @@ class WssClient():
     def _create_new_order_future(self, cid, order_type, timeout=None):
         """Create future objects for new orders"""
         confirm_future_id = None
-        if order_type in ("MARKET", "EXCHANGE MARKET"):
+        if order_type in ("MARKET", "EXCHANGE MARKET", "IOC", "EXCHANGE IOC"):
             confirm_future_id = f"oc_{cid}"
             self.futures[confirm_future_id] = TimedFuture(timeout)
         else:
