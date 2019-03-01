@@ -56,7 +56,6 @@ class WssClient():
         self.connections = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler(CLIENT_HANDLERS)
-        self.loop = loop or asyncio.get_event_loop()
 
     def stop(self):
         """Tries to close all connections and finally stops the reactor.
@@ -709,7 +708,7 @@ class WssClient():
             order_type=order_type,
             timeout=kwargs.get("timeout")
         )
-        self.loop.create_task(self.connections["auth"].send(payload))
+        asyncio.get_event_loop().create_task(self.connections["auth"].send(payload))
         return {
             "request_future": request_future,
             "confirm_future": confirm_future,
@@ -837,7 +836,7 @@ class WssClient():
         self.futures[confirm_future_id] = TimedFuture(timeout)
         self.futures[confirm_future_id].future_id = confirm_future_id
 
-        self.loop.create_task(self.connections["auth"].send(payload))
+        asyncio.get_event_loop().create_task(self.connections["auth"].send(payload))
         return {
             "request_future": self.futures[request_future_id],
             "confirm_future": self.futures[confirm_future_id],
@@ -891,7 +890,7 @@ class WssClient():
         self.futures[confirm_future_id] = TimedFuture(timeout)
         self.futures[confirm_future_id].future_id = confirm_future_id
 
-        self.loop.create_task(self.connections["auth"].send(payload))
+        asyncio.get_event_loop().create_task(self.connections["auth"].send(payload))
         return {
             "request_future": self.futures[request_future_id],
             "confirm_future": self.futures[confirm_future_id],
@@ -957,4 +956,4 @@ class WssClient():
             calculations
         ]
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
-        self.loop.create_task(self.connections["auth"].send(payload))
+        asyncio.get_event_loop().create_task(self.connections["auth"].send(payload))
