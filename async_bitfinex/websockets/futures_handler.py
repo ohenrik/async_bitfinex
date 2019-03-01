@@ -157,13 +157,22 @@ def order_cancel_success(message, futures):
     order_cid = message[2][2] or message[2][0] # uses id, if no cid given
     future_id = f"oc_{order_cid}"
     future = futures[future_id]
-    future.set_result({
-        "status": "SUCCESS", # Error/Sucess
-        "id": message[2][0],
-        "cid": message[2][2],
-        "response": message[2],
-        "comment": None
-    })
+    if message[2][13] == "IOC CANCELED":
+        future.set_result({
+            "status": "IOC CANCELED", # Error/Sucess
+            "id": message[2][0],
+            "cid": message[2][2],
+            "response": message[2],
+            "comment": None
+        })
+    else:
+        future.set_result({
+            "status": "SUCCESS", # Error/Sucess
+            "id": message[2][0],
+            "cid": message[2][2],
+            "response": message[2],
+            "comment": None
+        })
     del futures[future_id]
 
 def subscription_confirmations(message, futures):
