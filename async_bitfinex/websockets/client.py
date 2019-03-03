@@ -60,7 +60,7 @@ class WssClient():
     def stop(self):
         """Tries to close all connections and finally stops the reactor.
         Properly stops the program."""
-        for connection in self.connections:
+        for connection in self.connections.values():
             connection.close()
 
     def _nonce(self):
