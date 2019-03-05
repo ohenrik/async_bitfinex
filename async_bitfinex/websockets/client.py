@@ -54,6 +54,8 @@ class WssClient():
         self.key = key
         self.secret = secret
         self.connections = {}
+        self.channels = {}
+        self.future_channels = []
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler(CLIENT_HANDLERS)
 
@@ -62,6 +64,7 @@ class WssClient():
         Properly stops the program."""
         for connection in self.connections.values():
             connection.close()
+
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -96,6 +99,19 @@ class WssClient():
             )
             return self.futures[future_id]
 
+
+                # "name": 'book',
+                # "symbol": symbol,
+                # "prec": precision,
+                # "callback": callback
+
+    def set_channel_details(self, message):
+        for index, channel_info in enumerate(self.future_channels):
+            if channel_info['name'] == message['channel'] and channel_info['symbol'] == message['symbol'] and channel_info['prec'] == message['prec']:
+                self.future_channels.pop(index)
+                chanid = message['chanId']
+                self.channels[chanid] = { **channel_info }
+
     async def create_connection(self, connection_name, payload, callback, **kwargs):
         """Create a new websocket connection, store the connection and
         assign a callback for incomming messages.
@@ -114,17 +130,33 @@ class WssClient():
             be handling all messages returned from operations like new_order or
             cancel_order, so make sure you handle all these messages.
         """
+
+        callback_func = callback # initialy set it to the callback with which the method was started
         empty_messages_callback = kwargs.get("empty_messages_callback", None)
         async with websockets.connect(STREAM_URL) as websocket:
             self.connections[connection_name] = websocket
             await websocket.send(payload)
             async for message in websocket:
+                # breakpoint()
                 message = json.loads(message)
+                if isinstance(message, dict):
+                    channel_id = message.get("chanId", None)
+                    channel_name = message.get("channel", None)
+                    channel_symbol = message.get("symbol", None)
+                    channel_precision = message.get("prec", None)
+                    if channel_name == "book":
+                        self.set_channel_details(message)
+
+                    callback_func = self.channels[channel_id]["callback"] if channel_id in self.channels else callback
+
+                chanid = message[0] if isinstance(message, list) else None
+                callback_func = self.channels[chanid]["callback"] if chanid in self.channels else callback
+
                 self.futures(message)
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(message)
+                if asyncio.iscoroutinefunction(callback_func):
+                    await callback_func(message)
                 else:
-                    callback(message)
+                    callback_func(message)
                 if empty_messages_callback and (not websocket.messages):
                     if asyncio.iscoroutinefunction(empty_messages_callback):
                         await empty_messages_callback()
@@ -132,7 +164,7 @@ class WssClient():
                         empty_messages_callback()
 
 
-    async def subscribe(self, connection_name, payload, create_connection=False,
+    async def subscribe(self, connection_name, payload, symbol=None, precision=None, create_connection=False,
                         callback=None, **kwargs):
         """Subscribes over existing connection if present. Creates new connection
         if needed."""
@@ -141,6 +173,7 @@ class WssClient():
             assert callback, "Callback function cannot be None"
             asyncio.ensure_future(
                 self.create_connection(connection_name, payload, callback,
+                                       symbol=symbol, precision=precision,
                                        **kwargs)
             )
         else:
@@ -379,6 +412,14 @@ class WssClient():
             "len": length,
             "symbol": symbol,
         }
+        self.future_channels.append(
+            {
+                "name": 'book',
+                "symbol": symbol,
+                "prec": precision,
+                "callback": callback
+            }
+        )
         payload = json.dumps(data, ensure_ascii=False).encode('utf8')
         self.futures[future_id] = TimedFuture(timeout)
         self.futures[future_id].future_id = future_id
@@ -391,6 +432,8 @@ class WssClient():
         asyncio.get_event_loop().create_task(self.subscribe(
             connection_name=connection_name,
             payload=payload,
+            symbol=symbol,
+            precision=precision,
             callback=callback,
             create_connection=create_connection,
             **kwargs
