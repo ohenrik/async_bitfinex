@@ -137,7 +137,6 @@ class WssClient():
         """Subscribes over existing connection if present. Creates new connection
         if needed."""
         if create_connection:
-            # print("New connection created")
             assert callback, "Callback function cannot be None"
             asyncio.ensure_future(
                 self.create_connection(connection_name, payload, callback,
