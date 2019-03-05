@@ -810,6 +810,7 @@ class WssClient():
 
         """
         assert any([order_id, order_cid]), "Requires order_id or order_cid"
+        assert not all([order_id, order_cid]), "Requires either order_id or order_cid, not both"
 
         if order_id:
             cancel_message = {'id': order_id}
