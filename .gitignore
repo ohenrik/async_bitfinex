@@ -10,6 +10,7 @@ dist
 .pytest_cache/
 notebooks/
 .envrc
+new_websocket_local.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
