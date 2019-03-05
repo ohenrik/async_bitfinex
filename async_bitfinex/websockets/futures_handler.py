@@ -187,8 +187,12 @@ def subscription_confirmations(message, futures):
         A dict of intercept_id's and future objects.
         dict{intercept_id, future_object}
     """
-    if message["channel"] in ("trades", "book", "ticker"):
+    if message["channel"] in ("trades", "ticker"):
         future_id = f"{message['channel']}_{message['symbol']}"
+        futures[future_id].set_result(message)
+        del futures[future_id]
+    elif message["channel"] == "book":
+        future_id = f"book_{message['symbol']}_{message['prec']}_{message['len']}"
         futures[future_id].set_result(message)
         del futures[future_id]
     elif message["channel"] == "candles":

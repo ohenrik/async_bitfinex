@@ -371,7 +371,7 @@ class WssClient():
             )
         """
         symbol = utils.order_symbol(symbol)
-        future_id = "_".join(["book", symbol])
+        future_id = "_".join(["book", symbol, precision, length])
         data = {
             "event": 'subscribe',
             "channel": "book",
