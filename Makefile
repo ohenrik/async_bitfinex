@@ -15,7 +15,8 @@ clean_doc:
 	rm -rf docs/build/
 
 publish:
-	python setup.py sdist bdist_wheel upload
+	python setup.py sdist bdist_wheel
+	twine upload dist/*
 
 
 .DEFAULT_GOAL := show-help

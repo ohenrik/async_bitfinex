@@ -12,6 +12,8 @@ notebooks/
 .envrc
 new_websocket_local.py
 
+.pypirc
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
