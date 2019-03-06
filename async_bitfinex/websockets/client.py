@@ -54,6 +54,7 @@ class WssClient():
         self.key = key
         self.secret = secret
         self.connections = {}
+        self.channels = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler(CLIENT_HANDLERS)
 
@@ -94,6 +95,7 @@ class WssClient():
             asyncio.get_event_loop().create_task(
                 self.connections[connection_name].send(payload)
             )
+            del self.channels[channel_id]
             return self.futures[future_id]
 
     async def create_connection(self, connection_name, payload, callback, **kwargs):
@@ -120,11 +122,21 @@ class WssClient():
             await websocket.send(payload)
             async for message in websocket:
                 message = json.loads(message)
+
+                # Store list of subscribed channels
+                if isinstance(message, dict) and message["event"] == "subscribed":
+                    self.channels[message["chanId"]] = message
+
+                # Check for Future objects
                 self.futures(message)
+
+                # Execute callbacks
                 if asyncio.iscoroutinefunction(callback):
                     await callback(message)
                 else:
                     callback(message)
+
+                # If no more messages in que execute empty_messages_callback
                 if empty_messages_callback and (not websocket.messages):
                     if asyncio.iscoroutinefunction(empty_messages_callback):
                         await empty_messages_callback()
