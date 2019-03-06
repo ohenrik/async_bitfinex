@@ -5,6 +5,7 @@ import hmac
 import hashlib
 import asyncio
 import websockets
+from copy import deepcopy
 from websockets.protocol import State
 from .. import utils
 from . import abbreviations
@@ -54,9 +55,13 @@ class WssClient():
         self.key = key
         self.secret = secret
         self.connections = {}
-        self.channels = {}
+        self._channels = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler(CLIENT_HANDLERS)
+
+    @property
+    def channels(self):
+        return deepcopy(self._channels)
 
     def stop(self):
         """Tries to close all connections and finally stops the reactor.
@@ -95,7 +100,6 @@ class WssClient():
             asyncio.get_event_loop().create_task(
                 self.connections[connection_name].send(payload)
             )
-            del self.channels[channel_id]
             return self.futures[future_id]
 
     async def create_connection(self, connection_name, payload, callback, **kwargs):
@@ -125,7 +129,9 @@ class WssClient():
 
                 # Store list of subscribed channels
                 if isinstance(message, dict) and message["event"] == "subscribed":
-                    self.channels[message["chanId"]] = message
+                    self._channels[message["chanId"]] = message
+                elif isinstance(message, dict) and message["event"] == "unsubscribed":
+                    del self._channels[message["chanId"]]
 
                 # Check for Future objects
                 self.futures(message)
