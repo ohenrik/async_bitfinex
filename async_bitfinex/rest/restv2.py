@@ -11,7 +11,7 @@ import requests
 from .. import utils
 
 PROTOCOL = "https"
-HOST = "api.bitfinex.com"
+HOST = "api-pub.bitfinex.com"
 VERSION = "v2"
 
 
@@ -119,6 +119,12 @@ class Client:
             except JSONDecodeError:
                 content = response.text()
             raise BitfinexException(response.status_code, response.reason, content)
+
+
+    def _create_url_parameters(self, **kwargs):
+        if kwargs:
+            params = ['{}={}'.format(key,value) for key,value in kwargs.items()]
+            return "?"+"&".join(params)
 
     # REST PUBLIC ENDPOINTS
     def platform_status(self):
@@ -303,7 +309,7 @@ class Client:
         response = self._get(path)
         return response
 
-    def trades(self, symbol):
+    def trades(self, symbol, **kwargs):
         """`Bitfinex trades reference
         <https://bitfinex.readme.io/v2/reference#rest-public-trades>`_
 
@@ -351,7 +357,9 @@ class Client:
             bfx_client.trades('tBTCUSD')
 
         """
-        path = "v2/trades/{}/hist".format(symbol)
+
+        params = self._create_url_parameters(**kwargs)
+        path = "v2/trades/{}/hist{}".format(symbol, params)
         response = self._get(path)
         return response
 
