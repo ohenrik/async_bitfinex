@@ -13,7 +13,6 @@ from .futures_handler import FuturesHandler, CLIENT_HANDLERS
 
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
-
 class DummyState:
     state = State.CONNECTING
 
@@ -58,6 +57,7 @@ class WssClient():
         self._channels = {}
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler(CLIENT_HANDLERS)
+        self.disable_ping_timeout = False
 
     @property
     def channels(self):
@@ -121,7 +121,11 @@ class WssClient():
             cancel_order, so make sure you handle all these messages.
         """
         empty_messages_callback = kwargs.get("empty_messages_callback", None)
-        async with websockets.connect(STREAM_URL) as websocket:
+        options = {}
+        if self.disable_ping_timeout:
+            options['ping_timeout'] = None
+
+        async with websockets.connect(STREAM_URL, **options) as websocket:
             self.connections[connection_name] = websocket
             await websocket.send(payload)
             async for message in websocket:
