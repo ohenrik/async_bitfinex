@@ -352,6 +352,79 @@ class WssClient():
         ))
         return self.futures[future_id]
 
+    def subscribe_to_status(self, key='liq', symbol='global', callback=None, connection_name="status",
+                            timeout=None, **kwargs):
+        """Subscribe to and receive different types of platform information,
+        currently supports derivatives pair status and liquidation feed.
+        By default "key" and "symbol" are set to retrive liquidation feed.
+
+        Parameters
+        ----------
+        key : str
+            Key can be "liq" for liquidation feed or "deriv" for
+            derivatives pair status.
+
+        symbol : str
+            Symbol to request data for.
+            Derivatives pair example: "tBTCF0:USTF0"
+            Liquidation feed example: "global"
+
+        callback : func
+            A function to use to handle incomming messages
+
+        timeout : int
+            Seconds before subcribe request response future times out
+
+        Returns
+        -------
+        str
+            future id of subscribe request response
+
+        Example
+        -------
+         ::
+
+            def my_handler(message):
+                # Here you can do stuff with the messages
+                print(message)
+
+            # You should only need to create and authenticate a client once.
+            # Then simply reuse it later
+            my_client = WssClient(key, secret)
+            my_client.authenticate(print)
+            my_client.subscribe_to_status(
+                key="deriv",
+                symbol="tBTCF0:USTF0",
+                callback=my_handler
+            )
+            my_client.start()
+        """
+
+        future_id = 'status'
+        key_data = key + ':' + symbol
+        data = {
+            'event': 'subscribe',
+            'channel': 'status',
+            'key': key_data,
+        }
+        payload = json.dumps(data, ensure_ascii=False).encode('utf8')
+        self.futures[future_id] = TimedFuture(timeout)
+        self.futures[future_id].future_id = future_id
+        create_connection = False
+        if not self.connections.get(connection_name, False):
+            self.connections[connection_name] = DummyState
+            create_connection = True
+
+        asyncio.get_event_loop().create_task(self.subscribe(
+            connection_name=connection_name,
+            payload=payload,
+            callback=callback,
+            create_connection=create_connection,
+            **kwargs
+        ))
+
+        return self.futures[future_id]
+
     # Precision: R0, P0, P1, P2, P3
     def subscribe_to_orderbook(self, symbol, precision, length, callback=None,
                                connection_name="book", timeout=None, **kwargs):
