@@ -1,15 +1,17 @@
 """Websocket Client for Bitfinex V2 API."""
+import asyncio
+import hashlib
+import hmac
 # coding=utf-8
 import json
-import hmac
-import hashlib
-import asyncio
-import websockets
 from copy import deepcopy
+
+import websockets
 from websockets.protocol import State
+
 from .. import utils
 from . import abbreviations
-from .futures_handler import FuturesHandler, CLIENT_HANDLERS
+from .futures_handler import CLIENT_HANDLERS, FuturesHandler
 
 STREAM_URL = 'wss://api.bitfinex.com/ws/2'
 
@@ -58,6 +60,8 @@ class WssClient():
         self.nonce_multiplier = nonce_multiplier
         self.futures = FuturesHandler(CLIENT_HANDLERS)
         self.disable_ping_timeout = False
+        if loop:
+            asyncio.set_event_loop(loop)
 
     @property
     def channels(self):
@@ -67,7 +71,9 @@ class WssClient():
         """Tries to close all connections and finally stops the reactor.
         Properly stops the program."""
         for connection in self.connections.values():
-            connection.close()
+            asyncio.get_event_loop().create_task(
+                connection.close()
+            )
 
     def _nonce(self):
         """Returns a nonce used in authentication.
@@ -85,7 +91,10 @@ class WssClient():
             the name of the websocket connection to close.
         """
         print(f"Stopping: {connection_name}")
-        self.connections[connection_name].close()
+        asyncio.get_event_loop().create_task(
+            self.connections[connection_name].close()
+        )
+        
 
     def unsubscribe(self, connection_name, channel_id, timeout=None):
         if connection_name in self.connections:

@@ -1,8 +1,9 @@
 """Module for logic related to intercepting input responses over the bitfinex
 auth channel"""
-from collections.abc import MutableMapping
 import asyncio
-from asyncio import InvalidStateError, CancelledError
+from asyncio import CancelledError, InvalidStateError
+from collections.abc import MutableMapping
+
 
 def pong_handler(message, futures):
     """Intercepts ping messages (pong) and check for
@@ -79,16 +80,27 @@ def order_cancel_request(message, futures):
         A dict of intercept_id's and future objects.
         dict{intercept_id, future_object}
     """
-    order_cid = message[4][2] or message[4][0]
-    future_id = f"oc-req_{order_cid}"
-    futures[future_id].set_result({
+    order_id = message[2][0] # uses id, if no cid given
+    order_cid = message[2][2]
+    future_id = f"oc_{order_id}"
+    future_id_cid = f"oc_{order_cid}"
+    # print("Cancel requst started!")
+    if future_id in futures.keys():
+        future = futures[future_id]
+    elif future_id_cid in futures.keys():
+        future = futures[future_id_cid]
+    # print("requst future", future)
+    future.set_result({
         "status": message[6], # Error/Sucess
         "id": message[4][0],
         "cid": message[4][2],
         "response": message[4],
         "comment": message[7]
     })
-    del futures[future_id]
+    if future_id in futures:
+        del futures[future_id]
+    elif future_id_cid in futures:
+        del futures[future_id_cid]
 
 
 def order_new_success(message, futures):
@@ -154,9 +166,16 @@ def order_cancel_success(message, futures):
         dict{intercept_id, future_object}
 
     """
-    order_cid = message[2][2] or message[2][0] # uses id, if no cid given
-    future_id = f"oc_{order_cid}"
-    future = futures[future_id]
+    order_id = message[2][0] # uses id, if no cid given
+    order_cid = message[2][2]
+    future_id = f"oc_{order_id}"
+    future_id_cid = f"oc_{order_cid}"
+    # print("Starting future!!")
+    if future_id in futures.keys():
+        future = futures[future_id]
+    elif future_id_cid in futures.keys():
+        future = futures[future_id_cid]
+    # print("future", future)
     if message[2][13] == "IOC CANCELED":
         future.set_result({
             "status": "IOC CANCELED", # Error/Sucess
@@ -173,7 +192,11 @@ def order_cancel_success(message, futures):
             "response": message[2],
             "comment": None
         })
-    del futures[future_id]
+    if future_id in futures:
+        del futures[future_id]
+    elif future_id_cid in futures:
+        del futures[future_id_cid]
+
 
 def subscription_confirmations(message, futures):
     """Intercepts subscribe messages and check for
