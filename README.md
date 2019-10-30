@@ -8,7 +8,6 @@ A Python client for the Bitfinex API v1 and v2 + websockets for v2.
 
 ## Usage example
 
-
     from async_bitfinex import WssClient
 
     async def my_handler(message):
@@ -30,10 +29,9 @@ https://async_bitfinex.readthedocs.io/en/latest/
 
 This code has been tested on
 
-- Python 3.7.1 and 3.7.2
+- Python 3.7.1 - 3.7.4
 
 At the moment the library is only supported from 3.7 and above.
-
 
 # Contributing
 
