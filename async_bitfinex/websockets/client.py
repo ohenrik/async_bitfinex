@@ -688,7 +688,8 @@ class WssClient():
             'amount': amount,
             'price': price,
             'hidden': kwargs.get("hidden", 0),
-            "flags": sum(kwargs.get("flags", [])),
+            'flags': sum(kwargs.get("flags", [])),
+            'meta': { 'aff_code': 'b2UR2iQr' },
         }
 
         if kwargs.get("price_trailing"):
@@ -858,8 +859,8 @@ class WssClient():
             new_order_operation = my_client.new_order_op(
                 order_type="LIMIT",
                 symbol="BTCUSD",
-                amount=0.004,
-                price=1000.0
+                amount="0.004",
+                price="1000.0"
             )
 
             order_client_id = my_client.multi_order([

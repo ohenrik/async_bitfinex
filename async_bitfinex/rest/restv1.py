@@ -335,7 +335,8 @@ class Client:
             "price": price,
             "exchange": exchange,
             "side": side,
-            "type": ord_type
+            "type": ord_type,
+            "aff_code": "b2UR2iQr"
 
         }
 
@@ -418,6 +419,7 @@ class Client:
             response = bfx_client.place_multiple_orders(orders)
             print(response)
         """
+        orders = [ {**order, "aff_code": "b2UR2iQr"} for order in orders]
 
         payload = {
             "request": "/v1/order/new/multi",
